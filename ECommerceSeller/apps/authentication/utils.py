@@ -19,10 +19,10 @@ def get_client_ip(request):
 
 def get_frontend_url():
     """Get frontend base URL from settings or environment."""
-    # Try to get from settings first, fallback to environment variable
+    # Try to get from settings first, fallback to request scheme/host
     frontend_url = getattr(settings, 'FRONTEND_URL', None)
     if not frontend_url:
-        from decouple import config
-        frontend_url = config('FRONTEND_URL', default='https://localhost')
+        # Default to localhost for development
+        frontend_url = 'http://127.0.0.1:8000'
     return frontend_url.rstrip('/')
 

@@ -127,9 +127,9 @@ class SellerAdmin(admin.ModelAdmin):
             color = '#dc3545'
         
         return format_html(
-            '<span style="color: {}; font-weight: bold; font-size: 14px;">{:.2f}</span>',
+            '<span style="color: {}; font-weight: bold; font-size: 14px;">{}</span>',
             color,
-            score
+            f"{score:.2f}"
         )
     performance_score_display.short_description = _('Score')
     performance_score_display.admin_order_field = 'performance_score'

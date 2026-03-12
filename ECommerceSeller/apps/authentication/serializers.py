@@ -10,41 +10,52 @@ User = get_user_model()
 
 # ModelSerializers
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Serializer for user registration."""
+    """Serializer for seller registration with business information."""
     
     password = serializers.CharField(
         write_only=True,
         min_length=8,
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        help_text='Minimum 8 characters'
     )
     password_confirm = serializers.CharField(
         write_only=True,
         min_length=8,
-        style={'input_type': 'password'}
+        style={'input_type': 'password'},
+        help_text='Confirm your password'
     )
-    role = serializers.ChoiceField(
-        choices=User.Role.choices,
-        required=False,
-        default=User.Role.USER
+    business_name = serializers.CharField(
+        write_only=True,
+        max_length=255,
+        help_text='Your business or store name'
     )
     
     class Meta:
         model = User
         fields = [
-            'email', 'first_name', 'last_name', 'phone', 'role',
-            'password', 'password_confirm'
+            'email', 'first_name', 'last_name', 'phone',
+            'password', 'password_confirm', 'business_name'
         ]
         extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True},
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+            'phone': {'required': False},
         }
     
     def validate(self, data):
-        """Validate passwords match."""
+        """Validate passwords match and business name."""
         if data.get('password') != data.pop('password_confirm'):
             raise serializers.ValidationError(
                 _("Passwords don't match.")
             )
+        
+        # Validate business name
+        business_name = data.get('business_name', '').strip()
+        if not business_name:
+            raise serializers.ValidationError(
+                {"business_name": _("Business name is required.")}
+            )
+        
         return data
     
     def validate_email(self, value):
@@ -55,32 +66,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             )
         return value
     
-    def validate_role(self, value):
-        """
-        Validate role - prevent privilege escalation.
-        Users can only register as USER. Admin roles must be set manually.
-        """
-        # Only allow USER role during registration
-        # Admin accounts should only be created through Django admin or management commands
-        if value == User.Role.ADMIN:
-            raise serializers.ValidationError(
-                _("Cannot register as administrator. Admin accounts must be created by system administrators.")
-            )
-        return value
-    
     def create(self, validated_data):
-        """Create new user with default USER role."""
-        # Force role to USER regardless of input to prevent privilege escalation
-        role = User.Role.USER
-                
+        """Create new seller user with business profile."""
+        # Extract business name
+        business_name = validated_data.pop('business_name')
+        
+        # Create user with SELLER role for seller registration
         user = User.objects.create_user(
             email=validated_data['email'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
             phone=validated_data.get('phone'),
-            role=role,
+            role=User.Role.SELLER,
             password=validated_data['password'],
         )
+        
+        # Store business_name temporarily for the signal to use
+        user._business_name = business_name
+        user.save()
         
         return user
         

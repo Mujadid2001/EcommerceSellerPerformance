@@ -1,5 +1,5 @@
 """
-Authentication and permission middleware for the attendance system.
+Authentication and permission middleware for the seller performance system.
 Handles redirects and access control based on user roles.
 """
 from django.shortcuts import redirect
@@ -17,11 +17,8 @@ class AuthenticationMiddleware:
         self.get_response = get_response
         # Pages that require authentication
         self.protected_pages = [
-            '/admin-dashboard/',
-            '/teacher-dashboard/',
-            '/student-dashboard/',
-            '/face-registration/',
-            '/attendance-marking/',
+            '/dashboard/',
+            '/admin/',
         ]
 
     def __call__(self, request):
@@ -35,11 +32,11 @@ def role_required(*roles):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('home')
+                return redirect('performance:marketplace')
             
             user_role = getattr(request.user, 'role', None)
             if user_role not in roles:
-                return redirect('home')
+                return redirect('performance:marketplace')
             
             return view_func(request, *args, **kwargs)
         return wrapper
@@ -51,26 +48,16 @@ def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated or request.user.role != 'admin':
-            return redirect('home')
+            return redirect('performance:marketplace')
         return view_func(request, *args, **kwargs)
     return wrapper
 
 
-def teacher_required(view_func):
-    """Decorator to require teacher role."""
+def user_required(view_func):
+    """Decorator to require authenticated user."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or request.user.role != 'teacher':
-            return redirect('home')
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
-def student_required(view_func):
-    """Decorator to require student role."""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or request.user.role != 'student':
-            return redirect('home')
+        if not request.user.is_authenticated:
+            return redirect('performance:marketplace')
         return view_func(request, *args, **kwargs)
     return wrapper

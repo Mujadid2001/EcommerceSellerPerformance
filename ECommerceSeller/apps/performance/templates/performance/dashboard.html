@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Seller Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 style="color: #00FFFF;">
+                <i class="bi bi-speedometer2"></i> Seller Dashboard
+            </h1>
+            <p class="lead" style="color: #FFFFFF;">{{ seller.business_name }}</p>
+        </div>
+    </div>
+
+    <!-- Performance Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow border-0 h-100" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%);">
+                <div class="card-body text-center">
+                    <h6 style="color: #000;">Performance Score</h6>
+                    <h1 class="display-3" style="color: #000; font-weight: bold;">{{ seller.performance_score }}</h1>
+                    <span class="badge" style="background: {% if seller.status == 'active' %}#00FF00{% elif seller.status == 'under_review' %}#FFA500{% else %}#FF4444{% endif %}; color: #000; font-size: 1rem;">
+                        {{ seller.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow border-0 h-100" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-body">
+                    <h6 style="color: #888;"><i class="bi bi-cart-check"></i> Total Orders</h6>
+                    <h2 class="display-5" style="color: #00FFFF;">{{ metrics.completed_orders }}</h2>
+                    <small style="color: #888;">Completed Successfully</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow border-0 h-100" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FF00 !important;">
+                <div class="card-body">
+                    <h6 style="color: #888;"><i class="bi bi-currency-dollar"></i> Total Sales</h6>
+                    <h2 class="display-6" style="color: #00FF00;">${{ metrics.total_sales_volume|floatformat:2 }}</h2>
+                    <small style="color: #888;">Revenue Generated</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow border-0 h-100" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #FFD700 !important;">
+                <div class="card-body">
+                    <h6 style="color: #888;"><i class="bi bi-star-fill"></i> Avg Rating</h6>
+                    <h2 class="display-5" style="color: #FFD700;">{{ metrics.average_rating|floatformat:2 }}</h2>
+                    <small style="color: #888;">Out of 5.0 Stars</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Performance Score Breakdown Chart -->
+        <div class="col-lg-6">
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-pie-chart"></i> Performance Score Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="scoreBreakdownChart" style="max-height: 300px;"></canvas>
+                    <hr style="border-color: #00FFFF;">
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <div class="p-2" style="background: rgba(0, 255, 255, 0.1); border-radius: 5px;">
+                                <small style="color: #888;">Sales Score</small>
+                                <p class="mb-0" style="color: #00FFFF; font-size: 1.1rem; font-weight: bold;">{{ breakdown.sales_score|floatformat:1 }}</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2" style="background: rgba(0, 255, 0, 0.1); border-radius: 5px;">
+                                <small style="color: #888;">Delivery Score</small>
+                                <p class="mb-0" style="color: #00FF00; font-size: 1.1rem; font-weight: bold;">{{ breakdown.delivery_score|floatformat:1 }}</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2" style="background: rgba(255, 215, 0, 0.1); border-radius: 5px;">
+                                <small style="color: #888;">Rating Score</small>
+                                <p class="mb-0" style="color: #FFD700; font-size: 1.1rem; font-weight: bold;">{{ breakdown.rating_score|floatformat:1 }}</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2" style="background: rgba(255, 68, 68, 0.1); border-radius: 5px;">
+                                <small style="color: #888;">Returns Penalty</small>
+                                <p class="mb-0" style="color: #FF4444; font-size: 1.1rem; font-weight: bold;">{{ breakdown.returns_penalty|floatformat:1 }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Metrics -->
+        <div class="col-lg-6">
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-graph-up"></i> Detailed Metrics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-dark table-borderless">
+                        <tbody style="color: #00FFFF;">
+                            <tr>
+                                <td><i class="bi bi-box"></i> Total Orders</td>
+                                <td class="text-end"><strong>{{ metrics.total_orders }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-check-circle"></i> Completed Orders</td>
+                                <td class="text-end"><strong style="color: #00FF00;">{{ metrics.completed_orders }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-arrow-return-left"></i> Returned Orders</td>
+                                <td class="text-end"><strong style="color: #FF4444;">{{ metrics.returned_orders }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-percent"></i> Return Rate</td>
+                                <td class="text-end">
+                                    <span class="badge" style="background: {% if metrics.return_rate < 5 %}#00FF00{% elif metrics.return_rate < 10 %}#FFA500{% else %}#FF4444{% endif %}; color: #000;">
+                                        {{ metrics.return_rate|floatformat:2 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-truck"></i> Avg Delivery Time</td>
+                                <td class="text-end"><strong>{{ metrics.average_delivery_days|floatformat:1 }} days</strong></td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-chat-square-text"></i> Feedback Count</td>
+                                <td class="text-end"><strong>{{ metrics.feedback_count }}</strong></td>
+                            </tr>
+                            <tr style="border-top: 2px solid #00FFFF;">
+                                <td><i class="bi bi-currency-dollar"></i> Total Revenue</td>
+                                <td class="text-end"><strong style="color: #00FF00; font-size: 1.2rem;">${{ metrics.total_sales_volume|floatformat:2 }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-calculator"></i> Score Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Score</th>
+                                <th>Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Sales Volume</td>
+                                <td>{{ breakdown.sales_score|floatformat:2 }}</td>
+                                <td>{{ breakdown.weights.sales }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Delivery Speed</td>
+                                <td>{{ breakdown.delivery_score|floatformat:2 }}</td>
+                                <td>{{ breakdown.weights.delivery }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Customer Rating</td>
+                                <td>{{ breakdown.rating_score|floatformat:2 }}</td>
+                                <td>{{ breakdown.weights.rating }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Returns Penalty</td>
+                                <td>{{ breakdown.returns_penalty|floatformat:2 }}</td>
+                                <td>{{ breakdown.weights.returns }}%</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Total Score</strong></td>
+                                <td colspan="2"><strong>{{ breakdown.total_score|floatformat:2 }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-clock-history"></i> Recent Orders
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead style="border-bottom: 2px solid #00FFFF;">
+                                <tr style="color: #00FFFF;">
+                                    <th>Order ID</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Delivery</th>
+                                </tr>
+                            </thead>
+                            <tbody style="color: #FFFFFF;">
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td><strong style="color: #00FFFF;">#{{ order.id }}</strong></td>
+                                    <td style="color: #00FF00;">${{ order.order_amount|floatformat:2 }}</td>
+                                    <td>
+                                        <span class="badge" style="background: {% if order.status == 'delivered' %}#00FF00{% elif order.status == 'shipped' %}#3498DB{% elif order.status == 'pending' %}#FFA500{% else %}#888{% endif %}; color: #000;">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                        {% if order.is_returned %}
+                                        <span class="badge bg-danger">Returned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.order_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% if order.delivery_days %}
+                                            <span style="color: {% if order.delivery_days <= 3 %}#00FF00{% elif order.delivery_days <= 7 %}#FFA500{% else %}#FF4444{% endif %};">
+                                                {{ order.delivery_days }} days
+                                            </span>
+                                        {% else %}
+                                            <span style="color: #888;">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center" style="color: #888;">No orders yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-3">
+                        <a href="{% url 'performance:orders' %}" class="btn btn-sm" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                            View All Orders <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-chat-square-text"></i> Recent Feedback
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for feedback in recent_feedback %}
+                    <div class="mb-3 p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 3px solid #FFD700;">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div style="color: #FFD700;">
+                                {% for i in "12345"|slice:":"|make_list %}
+                                    {% if forloop.counter <= feedback.rating %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% else %}
+                                        <i class="bi bi-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <small style="color: #888;">{{ feedback.created_at|date:"M d" }}</small>
+                        </div>
+                        <p class="mb-0" style="color: #FFFFFF; font-size: 0.9rem;">{{ feedback.comment|truncatewords:15 }}</p>
+                    </div>
+                    {% empty %}
+                    <p class="text-center" style="color: #888;">No feedback yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card shadow border-0 mt-4" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-body text-center">
+                    <i class="bi bi-lightbulb" style="font-size: 3rem; color: #FFA500;"></i>
+                    <h6 class="mt-3" style="color: #00FFFF;">Quick Tips</h6>
+                    <p style="color: #FFFFFF; font-size: 0.9rem;">
+                        Maintain a delivery time under 5 days and keep return rates below 5% to achieve Active status!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Performance Score Breakdown Chart
+const ctx = document.getElementById('scoreBreakdownChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Sales (30%)', 'Delivery (25%)', 'Rating (30%)', 'Returns (15%)'],
+        datasets: [{
+            data: [
+                {{ breakdown.sales_score|floatformat:2 }},
+                {{ breakdown.delivery_score|floatformat:2 }},
+                {{ breakdown.rating_score|floatformat:2 }},
+                {{ breakdown.returns_penalty|floatformat:2 }}
+            ],
+            backgroundColor: [
+                '#00FFFF',
+                '#00FF00',
+                '#FFD700',
+                '#FF4444'
+            ],
+            borderColor: '#1a1a1a',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: '#00FFFF',
+                    font: {
+                        size: 12
+                    },
+                    padding: 15
+                }
+            },
+            tooltip: {
+                backgroundColor: '#1a1a1a',
+                borderColor: '#00FFFF',
+                borderWidth: 1,
+                titleColor: '#00FFFF',
+                bodyColor: '#FFFFFF'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
+

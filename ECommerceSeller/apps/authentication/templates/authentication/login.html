@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); min-height: 100vh; padding-top: 80px;">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 3px solid #00FFFF;">
+                <div class="card-header text-center" style="border-bottom: 2px solid #00FFFF; background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);">
+                    <h3 class="card-title mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-person-circle"></i> Login to Marketplace
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <form id="loginForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-envelope"></i> Email Address
+                            </label>
+                            <input type="email" 
+                                   class="form-control form-control-lg" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="Enter your email"
+                                   required
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                        </div>
+                        <div class="mb-4">
+                            <label for="password" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-lock"></i> Password
+                            </label>
+                            <input type="password" 
+                                   class="form-control form-control-lg" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="Enter your password"
+                                   required
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                        </div>
+                        <button type="submit" 
+                                class="btn btn-lg w-100 mb-3"
+                                style="background: linear-gradient(135deg, #00FF00 0%, #00CED1 100%); color: #000; font-weight: bold; border: none;">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </button>
+                    </form>
+                    <div class="text-center">
+                        <p style="color: #888;">Don't have an account?</p>
+                        <a href="{% url 'auth-register' %}" 
+                           class="btn btn-outline-light"
+                           style="border-color: #00FFFF; color: #00FFFF;">
+                            <i class="bi bi-person-plus"></i> Create Account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        console.log('Login form found, attaching event listener');
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Login form submitted');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            
+            console.log('Login attempt for:', email);
+            
+            // Basic validation
+            if (!email || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+            
+            // Get CSRF token properly
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            console.log('CSRF Token:', csrfToken);
+            
+            const data = {
+                email: email,
+                password: password
+            };
+            
+            console.log('Sending login request with data:', data);
+
+            fetch('/auth/api/authentication/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                console.log('Login response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Login response data:', data);
+                if (data.tokens || data.message) {
+                    // Store tokens if provided
+                    if (data.tokens) {
+                        localStorage.setItem('access_token', data.tokens.access);
+                        localStorage.setItem('refresh_token', data.tokens.refresh);
+                    }
+                    alert(data.message || 'Login successful');
+                    // Redirect to marketplace
+                    window.location.href = '/marketplace/';
+                } else {
+                    alert(data.error || data.detail || 'Login failed');
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                alert('An error occurred during login');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            });
+        });
+    } else {
+        console.log('Login form not found');
+    }
+});
+</script>
+{% endblock %}

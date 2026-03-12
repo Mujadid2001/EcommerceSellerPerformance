@@ -1,292 +1,227 @@
 """
-Admin configuration for authentication models.
+Admin configuration for authentication models following Django best practices.
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 from apps.authentication.models import User, LoginLog, EmailVerificationToken
-
-
-class PendingTeacherFilter(admin.SimpleListFilter):
-    """Custom filter to show pending teacher approvals."""
-    title = 'Teacher Approval Status'
-    parameter_name = 'teacher_approval'
-    
-    def lookups(self, request, model_admin):
-        return (
-            ('pending', 'Pending Approval'),
-            ('approved', 'Approved'),
-        )
-    
-    def queryset(self, request, queryset):
-        if self.value() == 'pending':
-            return queryset.filter(role=User.Role.TEACHER, is_approved=False)
-        if self.value() == 'approved':
-            return queryset.filter(role=User.Role.TEACHER, is_approved=True)
-        return queryset
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    """Admin interface for User model."""
+    """
+    Custom admin interface for User model.
+    Follows Django's UserAdmin pattern with customizations for email-based auth.
+    """
     
+    # List display configuration
     list_display = (
-        'email', 'get_full_name', 'role', 'is_active', 'is_verified',
-        'approval_status', 'verify_action', 'created_at'
+        'email', 'get_full_name_display', 'role_badge', 'is_active', 
+        'is_verified', 'is_staff', 'created_at'
     )
     list_filter = (
-        PendingTeacherFilter,
         'role', 
         'is_active', 
+        'is_staff',
+        'is_superuser',
         'is_verified', 
         'is_approved', 
         'created_at'
     )
-    search_fields = ('email', 'first_name', 'last_name')
+    search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
     
-    # Custom filter to show pending teachers
-    list_display_links = ('email', 'get_full_name')
+    list_display_links = ('email',)
+    list_editable = ('is_active',)
+    list_per_page = 50
     
-    def approval_status(self, obj):
-        """Display approval status with color coding."""
-        if obj.role == User.Role.TEACHER:
-            if obj.is_approved:
-                return format_html(
-                    '<span style="color: green; font-weight: bold;">✓ Approved</span>'
-                )
-            else:
-                return format_html(
-                    '<span style="color: orange; font-weight: bold;">⏳ Pending</span>'
-                )
-        return format_html('<span style="color: gray;">N/A</span>')
-    approval_status.short_description = 'Approval Status'
-    
-    def verify_action(self, obj):
-        """Display individual verify button for pending teachers."""
-        if obj.role == User.Role.TEACHER and not obj.is_approved:
-            return format_html(
-                '<a class="button default" href="{}?ids={}" '
-                'style="display: inline-block; background-color: #417690; color: white !important; '
-                'padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; '
-                'font-weight: 500; text-align: center; white-space: nowrap; cursor: pointer; '
-                'transition: background-color 0.3s ease; min-width: 90px;" '
-                'onmouseover="this.style.backgroundColor=\'#2e5266\';" '
-                'onmouseout="this.style.backgroundColor=\'#417690\';" '
-                'onclick="return confirm(\'Approve this teacher account?\');">'
-                '✓ Verify Now</a>',
-                reverse('admin:approve_teacher_individual'),
-                obj.id
-            )
-        elif obj.role == User.Role.TEACHER and obj.is_approved:
-            return format_html('<span style="color: green; font-weight: 500;">✓ Verified</span>')
-        return '-'
-    verify_action.short_description = 'Quick Action'
-    
-    def get_queryset(self, request):
-        """Customize queryset to show pending teachers first."""
-        qs = super().get_queryset(request)
-        # Sort to show pending teachers at the top
-        return qs.order_by('is_approved', '-created_at')
-    
-    def changelist_view(self, request, extra_context=None):
-        """Add pending teacher count to the changelist."""
-        extra_context = extra_context or {}
-        pending_count = User.objects.filter(
-            role=User.Role.TEACHER,
-            is_approved=False
-        ).count()
-        extra_context['pending_teachers_count'] = pending_count
-        return super().changelist_view(request, extra_context=extra_context)
-    
+    # Fieldsets for add and change forms
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal Info', {
-            'fields': (
-                'first_name', 'last_name', 'phone', 'profile_picture'
-            )
+        (None, {
+            'fields': ('email', 'password')
         }),
-        ('Permissions', {
-            'fields': (
-                'is_active', 'is_staff', 'is_superuser', 'role',
-                'is_verified', 'is_approved'
-            )
+        (_('Personal Info'), {
+            'fields': ('first_name', 'last_name', 'phone', 'profile_picture')
         }),
-        ('Important Dates', {
-            'fields': ('last_login', 'created_at', 'updated_at')
+        (_('Permissions'), {
+            'fields': (
+                'is_active', 
+                'is_staff', 
+                'is_superuser',
+                'role',
+                'is_verified', 
+                'is_approved',
+                'groups', 
+                'user_permissions'
+            ),
+            'classes': ('collapse',)
+        }),
+        (_('Important Dates'), {
+            'fields': ('last_login', 'last_login_at', 'date_joined', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
     
+    # Add form fieldsets (for creating new users)
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'password1', 'password2'),
+            'fields': ('email', 'password1', 'password2', 'role', 'is_staff', 'is_superuser'),
         }),
-        ('Personal Info', {
-            'fields': ('first_name', 'last_name', 'phone')
-        }),
-        ('Permissions', {
-            'fields': ('role', 'is_active', 'is_staff', 'is_superuser', 'is_approved')
+        (_('Personal Info'), {
+            'classes': ('wide',),
+            'fields': ('first_name', 'last_name', 'phone'),
         }),
     )
     
-    readonly_fields = ('created_at', 'updated_at', 'last_login')
+    # Read-only fields
+    readonly_fields = ('created_at', 'updated_at', 'last_login', 'last_login_at', 'date_joined')
     
-    actions = ['approve_teachers', 'reject_teachers']
+    # Custom display methods
+    @admin.display(description='Full Name')
+    def get_full_name_display(self, obj):
+        """Display full name or email."""
+        return obj.get_full_name()
+    
+    @admin.display(description='Role')
+    def role_badge(self, obj):
+        """Display role as colored badge."""
+        colors = {
+            'admin': '#dc3545',
+            'user': '#28a745',
+        }
+        color = colors.get(obj.role, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            color,
+            obj.get_role_display_verbose()
+        )
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related."""
+        qs = super().get_queryset(request)
+        return qs.select_related()
+    
+    # Remove username field from the fieldsets
+    def get_fieldsets(self, request, obj=None):
+        """Return fieldsets based on whether adding or changing."""
+        if not obj:
+            return self.add_fieldsets
+        return super().get_fieldsets(request, obj)
     
     def get_urls(self):
-        """Add custom URL for individual teacher approval."""
-        from django.urls import path
+        """Custom admin URLs."""
         urls = super().get_urls()
-        custom_urls = [
-            path(
-                'approve-teacher/',
-                self.admin_site.admin_view(self.approve_teacher_individual),
-                name='approve_teacher_individual',
-            ),
-        ]
-        return custom_urls + urls
+        return urls
     
-    def approve_teacher_individual(self, request):
-        """Approve a single teacher account."""
-        from django.http import HttpResponseRedirect
-        from django.contrib import messages
-        from apps.authentication.email_utils import send_teacher_approval_email
-        
-        teacher_id = request.GET.get('ids')
-        if teacher_id:
-            try:
-                teacher = User.objects.get(id=teacher_id, role=User.Role.TEACHER)
-                teacher.is_approved = True
-                teacher.save()
-                
-                # Send approval email
-                email_sent = send_teacher_approval_email(teacher, approved_by=request.user)
-                
-                if email_sent:
-                    messages.success(
-                        request,
-                        f'Teacher {teacher.email} has been approved and notified via email.'
-                    )
-                else:
-                    messages.warning(
-                        request,
-                        f'Teacher {teacher.email} has been approved but email notification failed.'
-                    )
-            except User.DoesNotExist:
-                messages.error(request, 'Teacher not found.')
-        
-        return HttpResponseRedirect(reverse('admin:authentication_user_changelist'))
+    # Admin actions
+    @admin.action(description='Verify selected users')
+    def verify_users(self, request, queryset):
+        """Bulk verify user email addresses."""
+        updated = queryset.update(is_verified=True)
+        self.message_user(request, f'{updated} user(s) successfully verified.')
     
-    def approve_teachers(self, request, queryset):
-        """Approve selected teacher accounts."""
-        from apps.authentication.email_utils import send_teacher_approval_email
-        from django.contrib import messages
-        
-        teachers = queryset.filter(role=User.Role.TEACHER, is_approved=False)
-        
-        if not teachers.exists():
-            messages.warning(request, 'No pending teacher accounts selected.')
-            return
-        
-        count = 0
-        email_count = 0
-        failed_emails = []
-        
-        for teacher in teachers:
-            teacher.is_approved = True
-            teacher.save()
-            count += 1
-            
-            # Send approval email
-            if send_teacher_approval_email(teacher, approved_by=request.user):
-                email_count += 1
-            else:
-                failed_emails.append(teacher.email)
-        
-        # Success message
-        messages.success(
-            request, 
-            f'✓ Successfully approved {count} teacher account(s). {email_count} notification email(s) sent.'
-        )
-        
-        # Warning for failed emails
-        if failed_emails:
-            messages.warning(
-                request,
-                f'⚠ Email notification failed for: {", ".join(failed_emails)}'
-            )
+    @admin.action(description='Approve selected users')
+    def approve_users(self, request, queryset):
+        """Bulk approve user accounts."""
+        updated = queryset.update(is_approved=True)
+        self.message_user(request, f'{updated} user(s) successfully approved.')
     
-    approve_teachers.short_description = '✓ Approve selected teacher accounts and send emails'
+    @admin.action(description='Deactivate selected users')
+    def deactivate_users(self, request, queryset):
+        """Bulk deactivate user accounts."""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} user(s) successfully deactivated.')
     
-    def reject_teachers(self, request, queryset):
-        """Delete selected pending teacher accounts."""
-        from django.contrib import messages
-        
-        teachers = queryset.filter(role=User.Role.TEACHER, is_approved=False)
-        
-        if not teachers.exists():
-            messages.warning(request, 'No pending teacher accounts selected.')
-            return
-        
-        count = teachers.count()
-        teacher_emails = list(teachers.values_list('email', flat=True))
-        teachers.delete()
-        
-        messages.success(
-            request, 
-            f'✗ Rejected and deleted {count} teacher account(s): {", ".join(teacher_emails)}'
-        )
-    
-    reject_teachers.short_description = '✗ Reject and delete selected teacher accounts'
+    actions = ['verify_users', 'approve_users', 'deactivate_users']
 
 
 @admin.register(LoginLog)
 class LoginLogAdmin(admin.ModelAdmin):
-    """Admin interface for LoginLog model."""
+    """
+    Admin interface for LoginLog model.
+    Read-only audit trail of login attempts.
+    """
     
     list_display = (
-        'user', 'ip_address', 'success', 'failure_reason', 'timestamp'
+        'user_email', 'ip_address', 'success_badge', 'failure_reason', 'timestamp'
     )
     list_filter = ('success', 'timestamp')
-    search_fields = ('user__email', 'ip_address')
+    search_fields = ('user__email', 'ip_address', 'user_agent')
     readonly_fields = ('user', 'ip_address', 'user_agent', 'success',
                       'failure_reason', 'timestamp')
     ordering = ('-timestamp',)
+    date_hierarchy = 'timestamp'
+    list_per_page = 100
+    
+    @admin.display(description='User')
+    def user_email(self, obj):
+        """Display user email with link."""
+        if obj.user:
+            url = reverse('admin:authentication_user_change', args=[obj.user.id])
+            return format_html('<a href="{}">{}</a>', url, obj.user.email)
+        return '-'
+    
+    @admin.display(description='Status', boolean=True)
+    def success_badge(self, obj):
+        """Display success status as badge."""
+        return obj.success
     
     def has_add_permission(self, request):
         """Prevent manual addition of logs."""
         return False
     
+    def has_change_permission(self, request, obj=None):
+        """Prevent editing of logs."""
+        return False
+    
     def has_delete_permission(self, request, obj=None):
-        """Allow superusers to delete logs (needed for cascade deletes)."""
+        """Allow deletion for cleanup."""
         return request.user.is_superuser
 
 
 @admin.register(EmailVerificationToken)
 class EmailVerificationTokenAdmin(admin.ModelAdmin):
-    """Admin interface for EmailVerificationToken model."""
+    """
+    Admin interface for EmailVerificationToken model.
+    Manage email verification tokens.
+    """
     
     list_display = (
-        'user', 'token', 'is_used', 'is_expired_status', 'created_at', 'expires_at'
+        'user_email', 'token_short', 'created_at', 'expires_at', 
+        'is_used', 'is_valid_status'
     )
-    list_filter = ('is_used', 'created_at')
+    list_filter = ('is_used', 'created_at', 'expires_at')
     search_fields = ('user__email', 'token')
     readonly_fields = ('user', 'token', 'created_at', 'expires_at', 'is_used')
     ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+    list_per_page = 50
     
-    def is_expired_status(self, obj):
-        """Display expiration status."""
-        return obj.is_expired()
-    is_expired_status.short_description = 'Is Expired'
-    is_expired_status.boolean = True
+    @admin.display(description='User')
+    def user_email(self, obj):
+        """Display user email with link."""
+        url = reverse('admin:authentication_user_change', args=[obj.user.id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.email)
+    
+    @admin.display(description='Token')
+    def token_short(self, obj):
+        """Display shortened token."""
+        return f"{str(obj.token)[:8]}..."
+    
+    @admin.display(description='Valid', boolean=True)
+    def is_valid_status(self, obj):
+        """Display if token is valid."""
+        return obj.is_valid()
     
     def has_add_permission(self, request):
         """Prevent manual addition of tokens."""
         return False
     
-    def has_delete_permission(self, request, obj=None):
-        """Allow deletion of old tokens."""
-        return True
+    def has_change_permission(self, request, obj=None):
+        """Prevent editing of tokens."""
+        return False

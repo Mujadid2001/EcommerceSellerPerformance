@@ -1,0 +1,25 @@
+ showing on frontend{% extends 'base.html' %}
+
+{% block title %}No Seller Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card text-center mt-5">
+                <div class="card-body">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                    <h3 class="card-title mt-3">No Seller Profile Found</h3>
+                    <p class="card-text">
+                        Your account does not have a seller profile associated with it.
+                        Please contact an administrator to set up your seller account.
+                    </p>
+                    <a href="{% url 'performance:marketplace' %}" class="btn" style="background-color: #00FFFF; color: #000000; border-color: #00FFFF;">
+                        <i class="bi bi-house"></i> Go to Marketplace
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

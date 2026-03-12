@@ -1,0 +1,428 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - E-Commerce Seller Performance{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ensure CSRF token is available */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
+                <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%);">
+                    <h2 class="mb-0" style="color: #000; font-weight: bold;">
+                        <i class="bi bi-shop"></i> Become a Seller
+                    </h2>
+                    <p class="mb-0 mt-2" style="color: #000; font-size: 0.9rem;">Join our marketplace and showcase your products</p>
+                </div>
+                <div class="card-body p-4">
+                    <form id="registerForm" method="post">
+                        {% csrf_token %}
+                        
+                        <div class="alert" style="background-color: #1a3a3a; border: 2px solid #00FFFF; color: #00FFFF;" class="mb-4">
+                            <i class="bi bi-info-circle"></i> <strong>Seller Account:</strong> Your account will be created as a seller. You'll be able to manage products, orders, and track your performance.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="businessName" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-shop"></i> Business Name <span style="color: #FF6B6B;">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="businessName" 
+                                   name="businessName" 
+                                   placeholder="Your Store Name"
+                                   required
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            <small class="form-text" style="color: #888;">This will be displayed to customers</small>
+                            <div class="invalid-feedback" id="businessNameError"></div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-envelope"></i> Email Address <span style="color: #FF6B6B;">*</span>
+                            </label>
+                            <input type="email" 
+                                   class="form-control form-control-lg" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="your.email@example.com"
+                                   required
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            <div class="invalid-feedback" id="emailError"></div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="firstName" class="form-label" style="color: #00FFFF;">
+                                    <i class="bi bi-person"></i> First Name
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="firstName" 
+                                       name="firstName" 
+                                       placeholder="John"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="lastName" class="form-label" style="color: #00FFFF;">
+                                    <i class="bi bi-person"></i> Last Name
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="lastName" 
+                                       name="lastName" 
+                                       placeholder="Doe"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                                <label for="phone" class="form-label" style="color: #00FFFF;">
+                                    <i class="bi bi-telephone"></i> Phone Number
+                                </label>
+                                <input type="tel" 
+                                       class="form-control form-control-lg" 
+                                       id="phone" 
+                                       name="phone" 
+                                       placeholder="+1234567890"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                                <small class="form-text" style="color: #888;">For order notifications and support</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-lock"></i> Password <span style="color: #FF6B6B;">*</span>
+                            </label>
+                            <input type="password" 
+                                   class="form-control form-control-lg" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="••••••••"
+                                   required
+                                   minlength="8"
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            <small class="form-text" style="color: #888;">
+                                Minimum 8 characters with uppercase, lowercase, and numbers
+                            </small>
+                            <div class="invalid-feedback" id="passwordError"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label" style="color: #00FFFF;">
+                                <i class="bi bi-lock-fill"></i> Confirm Password <span style="color: #FF6B6B;">*</span>
+                            </label>
+                            <input type="password" 
+                                   class="form-control form-control-lg" 
+                                   id="confirmPassword" 
+                                   name="confirmPassword" 
+                                   placeholder="••••••••"
+                                   required
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            <div class="invalid-feedback" id="confirmPasswordError"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="terms" 
+                                       required
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF;">
+                                <label class="form-check-label" for="terms" style="color: #00FFFF;">
+                                    I agree to the <a href="#" style="color: #00CED1;">Terms and Conditions</a>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" 
+                                    class="btn btn-lg" 
+                                    id="registerBtn"
+                                    style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                                <i class="bi bi-check-circle"></i> Create Seller Account
+                            </button>
+                        </div>
+
+                        <div id="errorMessage" class="alert alert-danger mt-3 d-none"></div>
+                    </form>
+
+                    <hr class="my-4" style="border-color: #00FFFF;">
+
+                    <div class="text-center">
+                        <p style="color: #00FFFF;">Already have an account?</p>
+                        <a href="{% url 'auth-login' %}" class="btn btn-outline-light">
+                            <i class="bi bi-box-arrow-in-right"></i> Login Here
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 3px solid #00FF00;">
+            <div class="modal-body text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-check-circle-fill" style="font-size: 5rem; color: #00FF00;"></i>
+                </div>
+                <h3 style="color: #00FF00; font-weight: bold;">Welcome Aboard! 🎉</h3>
+                <p style="color: #FFFFFF; font-size: 1.1rem;" class="mt-3">
+                    Your account has been created and you're now logged in!
+                </p>
+                <div class="alert" style="background-color: #2d2d2d; border: 2px solid #00FFFF; color: #00FFFF;" class="mt-4">
+                    <i class="bi bi-speedometer2"></i> Taking you to your dashboard...
+                </div>
+                <p style="color: #888;" class="mt-3">
+                    <small>Redirecting in <span id="countdown">3</span> seconds...</small>
+                </p>
+                <div class="mt-4">
+                    <a href="{% url 'performance:dashboard' %}" class="btn btn-lg" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                        <i class="bi bi-speedometer2"></i> Go to Dashboard Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Helper function to get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Get CSRF token - try multiple sources
+function getCSRFToken() {
+    // Try cookie first
+    let token = getCookie('csrftoken');
+    
+    // Try meta tag
+    if (!token) {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+            token = metaTag.getAttribute('content');
+        }
+    }
+    
+    // Try form input
+    if (!token) {
+        const inputTag = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (inputTag) {
+            token = inputTag.value;
+        }
+    }
+    
+    console.log('CSRF Token found:', token ? 'Yes' : 'No');
+    return token;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Register page loaded');
+    console.log('CSRF Token available:', getCSRFToken() ? 'Yes' : 'No');
+    
+    const registerForm = document.getElementById('registerForm');
+    if (!registerForm) {
+        console.error('Register form not found!');
+        return;
+    }
+    
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('Form submitted');
+        
+        const businessName = document.getElementById('businessName').value;
+        const email = document.getElementById('email').value;
+        const firstName = document.getElementById('firstName').value;
+        const lastName = document.getElementById('lastName').value;
+        const phone = document.getElementById('phone').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const registerBtn = document.getElementById('registerBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Reset messages
+        if (errorMessage) errorMessage.classList.add('d-none');
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        
+        // Validate business name
+        if (!businessName.trim()) {
+            document.getElementById('businessName').classList.add('is-invalid');
+            document.getElementById('businessNameError').textContent = 'Business name is required';
+            return;
+        }
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            document.getElementById('confirmPassword').classList.add('is-invalid');
+            document.getElementById('confirmPasswordError').textContent = 'Passwords do not match';
+            return;
+        }
+        
+        // Disable button
+        registerBtn.disabled = true;
+        registerBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating Seller Account...';
+        
+        try {
+            const csrftoken = getCSRFToken();
+            if (!csrftoken) {
+                throw new Error('CSRF token not found. Please refresh the page and try again.');
+            }
+            
+            console.log('Sending registration request...');
+            const response = await fetch('/auth/api/authentication/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    email: email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: phone,
+                    password: password,
+                    password_confirm: confirmPassword,
+                    business_name: businessName
+                })
+            });
+            
+            const data = await response.json();
+            console.log('Response:', response.status, data);
+            
+            if (response.ok) {
+                // Auto-login the user after successful registration
+                try {
+                    const csrftoken = getCookie('csrftoken');
+                    const loginResponse = await fetch('/auth/api/authentication/login/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password
+                        })
+                    });
+                    
+                    if (loginResponse.ok) {
+                        const loginData = await loginResponse.json();
+                        // Store authentication info if needed (token/session is handled by Django)
+                        
+                        // Show success modal
+                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                        successModal.show();
+                        document.getElementById('registerForm').reset();
+                        
+                        // Countdown timer - redirect to dashboard since user is now logged in
+                        let countdown = 3;
+                        const countdownElement = document.getElementById('countdown');
+                        if (countdownElement) countdownElement.textContent = countdown;
+                        const countdownInterval = setInterval(() => {
+                            countdown--;
+                            if (countdownElement) countdownElement.textContent = countdown;
+                            if (countdown <= 0) {
+                                clearInterval(countdownInterval);
+                                window.location.href = '{% url "performance:dashboard" %}';
+                            }
+                        }, 1000);
+                    } else {
+                        // Login failed, just redirect to login page
+                        window.location.href = '{% url "auth-login" %}';
+                    }
+                } catch (loginError) {
+                    console.error('Auto-login failed:', loginError);
+                    // Redirect to login page on error
+                    window.location.href = '{% url "auth-login" %}';
+                }
+            } else {
+                // Handle validation errors
+                console.error('Registration failed:', data);
+                
+                // Show all errors in the error message box
+                let errorMessages = [];
+                
+                if (data.email) {
+                    document.getElementById('email').classList.add('is-invalid');
+                    document.getElementById('emailError').textContent = Array.isArray(data.email) ? data.email[0] : data.email;
+                    errorMessages.push(`Email: ${Array.isArray(data.email) ? data.email[0] : data.email}`);
+                }
+                if (data.password) {
+                    document.getElementById('password').classList.add('is-invalid');
+                    document.getElementById('passwordError').textContent = Array.isArray(data.password) ? data.password[0] : data.password;
+                    errorMessages.push(`Password: ${Array.isArray(data.password) ? data.password[0] : data.password}`);
+                }
+                if (data.business_name) {
+                    document.getElementById('businessName').classList.add('is-invalid');
+                    document.getElementById('businessNameError').textContent = Array.isArray(data.business_name) ? data.business_name[0] : data.business_name;
+                    errorMessages.push(`Business Name: ${Array.isArray(data.business_name) ? data.business_name[0] : data.business_name}`);
+                }
+                if (data.error) {
+                    errorMessages.push(data.error);
+                }
+                if (data.non_field_errors) {
+                    errorMessages.push(Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : data.non_field_errors);
+                }
+                
+                // Display errors
+                if (errorMessage && errorMessages.length > 0) {
+                    errorMessage.innerHTML = `<strong>Registration Failed:</strong><br>${errorMessages.join('<br>')}`;
+                    errorMessage.classList.remove('d-none');
+                } else if (errorMessage) {
+                    errorMessage.textContent = 'Registration failed. Please check your information and try again.';
+                    errorMessage.classList.remove('d-none');
+                }
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            if (errorMessage) {
+                errorMessage.textContent = `Network error: ${error.message}. Please check your connection and try again.`;
+                errorMessage.classList.remove('d-none');
+            }
+        } finally {
+            registerBtn.disabled = false;
+            registerBtn.innerHTML = '<i class="bi bi-check-circle"></i> Create Seller Account';
+        }
+    });
+
+// Password strength indicator
+document.getElementById('password').addEventListener('input', function() {
+    const password = this.value;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasMinLength = password.length >= 8;
+    
+    if (hasUpperCase && hasLowerCase && hasNumbers && hasMinLength) {
+        this.style.borderColor = '#00FF00';
+    } else {
+        this.style.borderColor = '#00FFFF';
+    }
+});
+});
+</script>
+{% endblock %}

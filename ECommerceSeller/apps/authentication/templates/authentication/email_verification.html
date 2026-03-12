@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Email Verification{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
+                <div class="card-body text-center p-5">
+                    <div id="verificationStatus">
+                        <div class="spinner-border text-info mb-4" role="status" style="width: 4rem; height: 4rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h3 style="color: #00FFFF;">Verifying your email...</h3>
+                        <p style="color: #888;">Please wait while we confirm your account.</p>
+                    </div>
+                    
+                    <div id="successMessage" class="d-none">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                        <h2 class="mt-3" style="color: #00FF00;">Email Verified!</h2>
+                        <p style="color: #00FFFF;">Your account has been successfully verified.</p>
+                        <a href="{% url 'auth-login' %}" class="btn btn-lg mt-3" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                            <i class="bi bi-box-arrow-in-right"></i> Login Now
+                        </a>
+                    </div>
+                    
+                    <div id="errorMessage" class="d-none">
+                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 5rem;"></i>
+                        <h2 class="mt-3" style="color: #FF4444;">Verification Failed</h2>
+                        <p id="errorText" style="color: #00FFFF;"></p>
+                        <a href="{% url 'auth-register' %}" class="btn btn-outline-light mt-3">
+                            <i class="bi bi-arrow-left"></i> Back to Register
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function verifyEmail() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    
+    if (!token) {
+        showError('Invalid verification link. No token provided.');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/api/authentication/verify-email/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: token })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('verificationStatus').classList.add('d-none');
+            document.getElementById('successMessage').classList.remove('d-none');
+        } else {
+            showError(data.error || 'Verification failed. Please try again or request a new verification email.');
+        }
+    } catch (error) {
+        showError('Network error. Please check your connection and try again.');
+    }
+}
+
+function showError(message) {
+    document.getElementById('verificationStatus').classList.add('d-none');
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').classList.remove('d-none');
+}
+
+// Verify on page load
+document.addEventListener('DOMContentLoaded', verifyEmail);
+</script>
+{% endblock %}

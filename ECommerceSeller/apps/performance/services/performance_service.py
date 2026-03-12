@@ -110,14 +110,15 @@ class PerformanceCalculationService:
             feedback_count=Count('id')
         )
         
+        # Convert all values to Decimal for consistent arithmetic
         self.metrics = {
             'total_orders': order_metrics['total_orders'],
             'completed_orders': order_metrics['completed_orders'],
             'returned_orders': order_metrics['returned_orders'],
-            'total_sales_volume': order_metrics['total_sales_volume'],
-            'average_delivery_days': order_metrics['average_delivery_days'],
-            'return_rate': order_metrics['return_rate'],
-            'average_rating': feedback_stats['avg_rating'] or Decimal('0.00'),
+            'total_sales_volume': Decimal(str(order_metrics['total_sales_volume'])) if order_metrics['total_sales_volume'] else Decimal('0.00'),
+            'average_delivery_days': Decimal(str(order_metrics['average_delivery_days'])) if order_metrics['average_delivery_days'] else Decimal('0.00'),
+            'return_rate': Decimal(str(order_metrics['return_rate'])) if order_metrics['return_rate'] else Decimal('0.00'),
+            'average_rating': Decimal(str(feedback_stats['avg_rating'])) if feedback_stats['avg_rating'] else Decimal('0.00'),
             'feedback_count': feedback_stats['feedback_count'] or 0,
         }
     

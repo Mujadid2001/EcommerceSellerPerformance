@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Seller Profile - E-Commerce Seller Performance{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 style="color: #00FFFF;">
+                <i class="bi bi-person-circle"></i> Seller Profile
+            </h1>
+            <p style="color: #FFFFFF;">Manage your business information and settings</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Profile Information -->
+        <div class="col-lg-8">
+            <div class="card shadow border-0 mb-4" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-briefcase"></i> Business Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="businessName" class="form-label" style="color: #00FFFF;">Business Name</label>
+                            <input type="text" class="form-control" id="businessName" value="{{ seller.business_name }}" 
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label" style="color: #00FFFF;">Description</label>
+                            <textarea class="form-control" id="description" rows="4" 
+                                      style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">{{ seller.description }}</textarea>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="contactEmail" class="form-label" style="color: #00FFFF;">Contact Email</label>
+                                <input type="email" class="form-control" id="contactEmail" value="{{ seller.user.email }}" readonly
+                                       style="background-color: #0d0d0d; border: 2px solid #00FFFF; color: #888;">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label" style="color: #00FFFF;">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" placeholder="(123) 456-7890"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 mt-3">
+                            <label for="address" class="form-label" style="color: #00FFFF;">Business Address</label>
+                            <input type="text" class="form-control" id="address" placeholder="123 Main St, City, State ZIP"
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="website" class="form-label" style="color: #00FFFF;">Website URL</label>
+                            <input type="url" class="form-control" id="website" placeholder="https://example.com"
+                                   style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                        </div>
+
+                        <div class="alert alert-info" style="background-color: rgba(0, 255, 255, 0.1); border: 1px solid #00FFFF; color: #00FFFF;">
+                            <i class="bi bi-info-circle"></i> Changes to your profile will be reviewed before becoming public.
+                        </div>
+
+                        <button type="submit" class="btn" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Settings -->
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-gear"></i> Account Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 style="color: #00FFFF;">Change Password</h6>
+                        <form id="passwordForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <input type="password" class="form-control" id="currentPassword" placeholder="Current Password"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" class="form-control" id="newPassword" placeholder="New Password"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" class="form-control" id="confirmNewPassword" placeholder="Confirm New Password"
+                                       style="background-color: #1a1a1a; border: 2px solid #00FFFF; color: #00FFFF;">
+                            </div>
+                            <button type="submit" class="btn btn-outline-light">
+                                <i class="bi bi-shield-lock"></i> Update Password
+                            </button>
+                        </form>
+                    </div>
+
+                    <hr style="border-color: #00FFFF;">
+
+                    <div>
+                        <h6 style="color: #FF4444;">Danger Zone</h6>
+                        <p style="color: #888;">Once you delete your account, there is no going back.</p>
+                        <button class="btn btn-outline-danger" onclick="confirmDelete()">
+                            <i class="bi bi-trash"></i> Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow border-0 mb-4" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-header" style="background: rgba(0, 255, 255, 0.1); border-bottom: 1px solid #00FFFF;">
+                    <h5 class="mb-0" style="color: #00FFFF;">
+                        <i class="bi bi-graph-up"></i> Performance Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="performance-circle mx-auto mb-3" style="width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(#00FF00 0% {{ seller.performance_score }}%, #1a1a1a {{ seller.performance_score }}% 100%); display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 130px; height: 130px; border-radius: 50%; background: #1a1a1a; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <h2 class="mb-0" style="color: #00FF00;">{{ seller.performance_score }}</h2>
+                                <small style="color: #00FFFF;">Score</small>
+                            </div>
+                        </div>
+                        <span class="badge" style="background: {% if seller.status == 'active' %}#00FF00{% elif seller.status == 'under_review' %}#FFA500{% else %}#FF4444{% endif %}; color: #000; font-size: 1rem;">
+                            {{ seller.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="stat-item mb-3 p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 4px solid #00FFFF;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #888;">Total Orders</span>
+                            <strong style="color: #00FFFF;">{{ seller.total_orders }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-item mb-3 p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 4px solid #00FF00;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #888;">Total Sales</span>
+                            <strong style="color: #00FF00;">${{ seller.total_sales_volume|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-item mb-3 p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 4px solid #FFD700;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #888;">Avg. Rating</span>
+                            <strong style="color: #FFD700;">
+                                <i class="bi bi-star-fill"></i> {{ seller.average_rating|floatformat:1 }}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-item mb-3 p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 4px solid #9B59B6;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #888;">Avg. Delivery</span>
+                            <strong style="color: #9B59B6;">{{ seller.average_delivery_days|floatformat:1 }} days</strong>
+                        </div>
+                    </div>
+
+                    <div class="stat-item p-3" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border-left: 4px solid #FF4444;">
+                        <div class="d-flex justify-content-between">
+                            <span style="color: #888;">Return Rate</span>
+                            <strong style="color: #FF4444;">{{ seller.return_rate|floatformat:1 }}%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-check" style="font-size: 3rem; color: #00FFFF;"></i>
+                    <h6 class="mt-3" style="color: #00FFFF;">Account Status</h6>
+                    <p style="color: #00FF00;">
+                        <i class="bi bi-check-circle-fill"></i> Verified
+                    </p>
+                    <small style="color: #888;">Member since {{ seller.created_at|date:"F Y" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        business_name: document.getElementById('businessName').value,
+        description: document.getElementById('description').value,
+    };
+
+    try {
+        const response = await fetch('/marketplace/api/sellers/{{ seller.id }}/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            alert('Profile updated successfully!');
+        } else {
+            alert('Failed to update profile');
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+});
+
+document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+    if (newPassword !== confirmPassword) {
+        alert('New passwords do not match!');
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/api/authentication/change-password/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                old_password: currentPassword,
+                new_password: newPassword
+            })
+        });
+
+        if (response.ok) {
+            alert('Password updated successfully!');
+            this.reset();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Failed to update password');
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+});
+
+function confirmDelete() {
+    if (confirm('Are you sure you want to delete your account? This action cannot be undone!')) {
+        if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
+            alert('Account deletion feature will be implemented with proper verification.');
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Homepage - E-Commerce Seller Performance{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section py-5" style="background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-bottom: 3px solid #00FFFF;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h1 class="display-3 fw-bold mb-4" style="color: #00FFFF;">
+                    Track & Optimize Your <span style="color: #00FF00;">Seller Performance</span>
+                </h1>
+                <p class="lead mb-4" style="color: #FFFFFF;">
+                    Comprehensive performance evaluation system for e-commerce sellers. Monitor sales, delivery speed, customer satisfaction, and more.
+                </p>
+                <div class="d-grid gap-2 d-md-flex">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'performance:dashboard' %}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                            <i class="bi bi-speedometer2"></i> My Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'auth-register' %}" class="btn btn-lg px-4" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                            <i class="bi bi-rocket-takeoff"></i> Get Started
+                        </a>
+                        <a href="{% url 'auth-login' %}" class="btn btn-outline-light btn-lg px-4">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'performance:marketplace' %}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="bi bi-shop"></i> Browse Sellers
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card shadow-lg border-0" style="background: rgba(0, 255, 255, 0.1); border: 2px solid #00FFFF !important;">
+                    <div class="card-body p-4">
+                        <h4 class="mb-4" style="color: #00FFFF;">
+                            <i class="bi bi-graph-up-arrow"></i> Live Statistics
+                        </h4>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="stat-card p-3 text-center" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border: 1px solid #00FFFF;">
+                                    <h2 class="mb-0" style="color: #00FF00;" id="totalSellers">{{ total_sellers }}</h2>
+                                    <small style="color: #00FFFF;">Active Sellers</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card p-3 text-center" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border: 1px solid #00FFFF;">
+                                    <h2 class="mb-0" style="color: #00FF00;" id="totalOrders">{{ total_orders }}</h2>
+                                    <small style="color: #00FFFF;">Total Orders</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card p-3 text-center" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border: 1px solid #00FFFF;">
+                                    <h2 class="mb-0" style="color: #00FF00;" id="avgScore">{{ average_score }}</h2>
+                                    <small style="color: #00FFFF;">Avg. Score</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card p-3 text-center" style="background: rgba(0, 0, 0, 0.5); border-radius: 10px; border: 1px solid #00FFFF;">
+                                    <h2 class="mb-0" style="color: #00FF00;" id="totalFeedback">{{ total_feedback }}</h2>
+                                    <small style="color: #00FFFF;">Reviews</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="display-4 fw-bold" style="color: #00FFFF;">
+            <i class="bi bi-stars"></i> Key Features
+        </h2>
+        <p class="lead" style="color: #FFFFFF;">Everything you need to track and improve your e-commerce performance</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-graph-up feature-icon" style="font-size: 3rem; color: #00FFFF;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Performance Analytics</h4>
+                    <p style="color: #FFFFFF;">Track sales volume, delivery speed, customer ratings, and return rates with comprehensive analytics.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-speedometer2 feature-icon" style="font-size: 3rem; color: #00FF00;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Real-Time Scoring</h4>
+                    <p style="color: #FFFFFF;">Automated weighted scoring algorithm evaluates your performance instantly based on multiple metrics.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-trophy feature-icon" style="font-size: 3rem; color: #FFD700;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Status Levels</h4>
+                    <p style="color: #FFFFFF;">Achieve Active, Under Review, or Suspended status based on your performance score thresholds.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-chat-square-text feature-icon" style="font-size: 3rem; color: #FF6B6B;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Customer Feedback</h4>
+                    <p style="color: #FFFFFF;">Collect and analyze customer reviews and ratings to identify improvement areas.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-box-seam feature-icon" style="font-size: 3rem; color: #9B59B6;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Order Management</h4>
+                    <p style="color: #FFFFFF;">Monitor all orders, track deliveries, and manage returns efficiently in one place.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="feature-card card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important; transition: transform 0.3s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-shield-check feature-icon" style="font-size: 3rem; color: #00CED1;"></i>
+                    <h4 class="mt-3" style="color: #00FFFF;">Secure & Reliable</h4>
+                    <p style="color: #FFFFFF;">Built with Django and modern security practices to protect your sensitive business data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performers Section -->
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="display-4 fw-bold" style="color: #00FFFF;">
+            <i class="bi bi-star-fill"></i> Top Performing Sellers
+        </h2>
+        <p class="lead" style="color: #FFFFFF;">Learn from the best in the marketplace</p>
+    </div>
+
+    <div class="row g-4">
+        {% for seller in top_sellers %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 2px solid #00FFFF !important;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 style="color: #00FFFF;">{{ seller.business_name }}</h5>
+                        <span class="badge" style="background: linear-gradient(135deg, #00FF00 0%, #00CC00 100%); color: #000;">
+                            {{ seller.status|upper }}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span style="color: #FFFFFF;">Performance Score</span>
+                            <strong style="color: #00FF00;">{{ seller.performance_score }}/100</strong>
+                        </div>
+                        <div class="progress" style="height: 10px; background-color: #1a1a1a;">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ seller.performance_score }}%; background: linear-gradient(90deg, #00FF00 0%, #00FFFF 100%);"
+                                 aria-valuenow="{{ seller.performance_score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small style="color: #888;">Orders</small>
+                            <p class="mb-0" style="color: #00FFFF;">{{ seller.total_orders }}</p>
+                        </div>
+                        <div class="col-6">
+                            <small style="color: #888;">Rating</small>
+                            <p class="mb-0" style="color: #FFD700;">
+                                <i class="bi bi-star-fill"></i> {{ seller.average_rating|floatformat:1 }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{% url 'performance:seller_profile' seller.id %}" class="btn btn-sm w-100" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+                        View Profile <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p style="color: #888;">No sellers available yet. Be the first to join!</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center mt-5">
+        <a href="{% url 'performance:marketplace' %}" class="btn btn-lg" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%); color: #000; font-weight: bold;">
+            <i class="bi bi-shop"></i> View All Sellers
+        </a>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="cta-section py-5" style="background: linear-gradient(135deg, #00FFFF 0%, #00CED1 100%);">
+    <div class="container text-center">
+        <h2 class="display-4 fw-bold mb-4" style="color: #000;">
+            Ready to Track Your Performance?
+        </h2>
+        <p class="lead mb-4" style="color: #000;">
+            Join thousands of sellers optimizing their e-commerce business
+        </p>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'auth-register' %}" class="btn btn-dark btn-lg px-5">
+            <i class="bi bi-rocket-takeoff"></i> Start Free Today
+        </a>
+        {% else %}
+        <a href="{% url 'performance:dashboard' %}" class="btn btn-dark btn-lg px-5">
+            <i class="bi bi-speedometer2"></i> Go to Dashboard
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.feature-card:hover {
+    transform: translateY(-10px);
+    border-color: #00FF00 !important;
+}
+
+.feature-icon {
+    transition: transform 0.3s;
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.2);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.6s ease-out;
+}
+</style>
+{% endblock %}

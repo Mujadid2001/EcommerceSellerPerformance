@@ -1,0 +1,134 @@
+oro{% extends 'base.html' %}
+
+{% block title %}{{ seller.business_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'performance:marketplace' %}">Marketplace</a></li>
+                    <li class="breadcrumb-item active">{{ seller.business_name }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h2 class="card-title">{{ seller.business_name }}</h2>
+                            <p class="text-muted">{{ seller.user.email }}</p>
+                        </div>
+                        <span class="badge badge-lg 
+                            {% if seller.status == 'active' %}bg-success
+                            {% elif seller.status == 'under_review' %}bg-warning
+                            {% else %}bg-danger{% endif %}">
+                            {{ seller.get_status_display }}
+                        </span>
+                    </div>
+
+                    {% if seller.description %}
+                    <p class="card-text">{{ seller.description }}</p>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h3 class="text-primary">{{ seller.performance_score|floatformat:1 }}</h3>
+                            <p class="text-muted">Performance Score</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3>{{ metrics.completed_orders }}</h3>
+                            <p class="text-muted">Completed Orders</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3>${{ metrics.total_sales_volume|floatformat:0 }}</h3>
+                            <p class="text-muted">Total Sales</p>
+                        </div>
+                        <div class="col-md-3">
+                            <h3>{{ metrics.average_rating|floatformat:1 }} <i class="bi bi-star-fill text-warning"></i></h3>
+                            <p class="text-muted">Average Rating</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Return Rate</small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                <div class="progress-bar 
+                                    {% if metrics.return_rate < 5 %}bg-success
+                                    {% elif metrics.return_rate < 10 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ metrics.return_rate }}%">
+                                </div>
+                            </div>
+                            <strong>{{ metrics.return_rate|floatformat:1 }}%</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Avg Delivery Time</small>
+                        <h4>{{ metrics.average_delivery_days|floatformat:1 }} days</h4>
+                    </div>
+
+                    <div>
+                        <small class="text-muted">Customer Feedback</small>
+                        <h4>{{ metrics.feedback_count }} reviews</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-chat-left-quote"></i> Customer Reviews</h5>
+                </div>
+                <div class="card-body">
+                    {% for feedback in recent_feedback %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="text-warning mb-1">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= feedback.rating %}
+                                            <i class="bi bi-star-fill"></i>
+                                        {% else %}
+                                            <i class="bi bi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">Order: {{ feedback.order.order_number }}</small>
+                            </div>
+                            <small class="text-muted">{{ feedback.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        {% if feedback.comment %}
+                        <p class="mt-2 mb-0">{{ feedback.comment }}</p>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-center text-muted">No reviews yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

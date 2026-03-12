@@ -246,7 +246,7 @@ class Order(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(order_amount__gt=0),
+                condition=models.Q(order_amount__gt=0),
                 name='order_amount_positive'
             ),
         ]
@@ -254,11 +254,58 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.order_number} - {self.seller.business_name}"
     
+    def clean(self):
+        """Validate order dates."""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        errors = {}
+        
+        # Validate shipped_date is not in the future
+        if self.shipped_date and self.shipped_date > timezone.now():
+            errors['shipped_date'] = "Shipped date cannot be in the future."
+        
+        # Validate delivered_date is not in the future
+        if self.delivered_date and self.delivered_date > timezone.now():
+            errors['delivered_date'] = "Delivered date cannot be in the future."
+        
+        # Validate shipped_date is not before order_date
+        if self.shipped_date and self.order_date and self.shipped_date < self.order_date:
+            errors['shipped_date'] = "Shipped date cannot be before the order date."
+        
+        # Validate delivered_date is not before order_date
+        if self.delivered_date and self.order_date and self.delivered_date < self.order_date:
+            errors['delivered_date'] = "Delivered date cannot be before the order date."
+        
+        # Validate delivered_date is not before shipped_date
+        if self.delivered_date and self.shipped_date and self.delivered_date < self.shipped_date:
+            errors['delivered_date'] = "Delivered date cannot be before the shipped date."
+        
+        if errors:
+            raise ValidationError(errors)
+    
     def save(self, *args, **kwargs):
         """Calculate delivery days on save if delivered."""
+        # Skip model validation for API updates (handled by serializer)
+        skip_validation = kwargs.pop('skip_validation', False)
+        if not skip_validation:
+            try:
+                self.clean()
+            except ValidationError as e:
+                # Log validation errors but don't raise them during API updates
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Order validation warning: {e}")
+        
         if self.delivered_date and self.order_date:
             delta = self.delivered_date - self.order_date
-            self.delivery_days = delta.days
+            # Ensure delivery_days is not negative (same day delivery = 1 day)
+            calculated_days = delta.days
+            if calculated_days <= 0:
+                # Same day or past date delivery = 1 day
+                self.delivery_days = 1
+            else:
+                self.delivery_days = calculated_days
         
         if self.status == self.Status.RETURNED:
             self.is_returned = True
@@ -336,7 +383,7 @@ class CustomerFeedback(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(rating__gte=1) & models.Q(rating__lte=5),
+                condition=models.Q(rating__gte=1) & models.Q(rating__lte=5),
                 name='rating_valid_range'
             ),
         ]

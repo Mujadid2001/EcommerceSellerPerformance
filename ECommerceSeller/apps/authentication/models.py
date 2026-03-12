@@ -11,10 +11,12 @@ from django.utils import timezone
 
 
 class UserManager(BaseUserManager):
-    """Custom user manager for authentication."""
+    """Custom user manager for authentication following Django best practices."""
+    
+    use_in_migrations = True
 
-    def create_user(self, email, password=None, **extra_fields):
-        """Create and save a regular user."""
+    def _create_user(self, email, password, **extra_fields):
+        """Create and save a user with the given email and password."""
         if not email:
             raise ValueError(_('The Email field must be set'))
         
@@ -24,18 +26,33 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    def create_user(self, email, password=None, **extra_fields):
+        """Create and save a regular user with email verification required."""
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('role', User.Role.USER)
+        
+        return self._create_user(email, password, **extra_fields)
+
     def create_superuser(self, email, password=None, **extra_fields):
-        """Create and save a superuser."""
+        """
+        Create and save a superuser with admin privileges.
+        Superusers have is_staff and is_superuser set to True.
+        """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('is_verified', True)
+        extra_fields.setdefault('is_approved', True)
+        extra_fields.setdefault('role', User.Role.ADMIN)
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_('Superuser must have is_staff=True.'))
         if extra_fields.get('is_superuser') is not True:
             raise ValueError(_('Superuser must have is_superuser=True.'))
         
-        return self.create_user(email, password, **extra_fields)
+        return self._create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -45,6 +62,7 @@ class User(AbstractUser):
         """User role choices."""
         ADMIN = 'admin', _('Administrator')
         USER = 'user', _('User')
+        SELLER = 'seller', _('Seller')
         
     
     # Remove username field
@@ -80,7 +98,7 @@ class User(AbstractUser):
     )
     is_approved = models.BooleanField(
         default=True,
-        help_text=_('Account approved by admin (for teachers)')
+        help_text=_('Account approved by admin')
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -104,9 +122,9 @@ class User(AbstractUser):
         related_query_name='custom_user',
     )
     
-    # Set USERNAME_FIELD
+    # Set USERNAME_FIELD and REQUIRED_FIELDS for Django authentication
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['password']
+    REQUIRED_FIELDS = []  # Empty because email is USERNAME_FIELD, only prompted for first/last name
     
     objects = UserManager()
     
@@ -119,21 +137,54 @@ class User(AbstractUser):
             models.Index(fields=['role']),
             models.Index(fields=['-created_at']),
         ]
+        db_table = 'auth_user'  # Industry standard table name
     
     def __str__(self):
-        return f"{self.get_full_name()} ({self.get_role_display()})"
+        """String representation showing email and role."""
+        full_name = self.get_full_name()
+        if full_name:
+            return f"{full_name} ({self.email})"
+        return self.email
+    
+    def get_full_name(self):
+        """Return the first_name plus the last_name, with a space in between."""
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        return full_name or self.email
+    
+    def get_short_name(self):
+        """Return the short name for the user (first_name or email)."""
+        return self.first_name or self.email.split('@')[0]
     
     def is_admin(self):
-        """Check if user is admin."""
-        return self.role == self.Role.ADMIN or self.is_superuser
+        """Check if user has admin privileges."""
+        return self.role == self.Role.ADMIN or self.is_superuser or self.is_staff
     
-    def is_user(self):
-        """Check if user is a regular user."""
-        return self.role == self.Role.USER
+    def is_regular_user(self):
+        """Check if user is a regular user (not admin)."""
+        return self.role == self.Role.USER and not self.is_superuser and not self.is_staff
     
     def get_role_display_verbose(self):
         """Get verbose role display."""
-        return dict(self.Role.choices).get(self.role, 'Unknown')
+        if self.is_superuser:
+            return 'Super Administrator'
+        return dict(self.Role.choices).get(self.role, 'User')
+    
+    def update_last_login(self):
+        """Update last login timestamp."""
+        self.last_login_at = timezone.now()
+        self.save(update_fields=['last_login_at'])
+    
+    def send_verification_email(self):
+        """Send email verification token to user."""
+        from apps.authentication.tasks import send_verification_email_task
+        
+        # Create verification token
+        token = EmailVerificationToken.objects.create(user=self)
+        
+        # Send email asynchronously
+        send_verification_email_task.delay(self.id, str(token.token))
+        
+        return token
 
 
 class LoginLog(models.Model):

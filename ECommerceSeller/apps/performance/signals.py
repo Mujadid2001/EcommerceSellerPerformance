@@ -2,13 +2,52 @@
 Signals for automatic performance updates
 
 Automatically triggers performance recalculation when relevant data changes.
+Also handles automatic seller profile creation for new users.
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import transaction
+from django.contrib.auth import get_user_model
 
-from apps.performance.models import Order, CustomerFeedback
+from apps.performance.models import Order, CustomerFeedback, Seller
 from apps.performance.services import StatusAssignmentService
+
+User = get_user_model()
+
+
+@receiver(post_save, sender=User)
+def create_seller_profile(sender, instance, created, **kwargs):
+    """
+    Automatically create a Seller profile when a new user with SELLER role registers.
+    Only users specifically registering as sellers get seller profiles.
+    Uses the business_name from registration if provided.
+    """
+    if created and not instance.is_superuser and instance.role == 'seller':
+        # Generate unique business registration number
+        business_reg = f"BRN{instance.id:06d}"
+        
+        # Get business name from registration or create default
+        if hasattr(instance, '_business_name') and instance._business_name:
+            business_name = instance._business_name
+        else:
+            # Fallback: use name or email prefix
+            if instance.first_name and instance.last_name:
+                business_name = f"{instance.first_name} {instance.last_name}'s Store"
+            else:
+                business_name = f"{instance.email.split('@')[0]}'s Store"
+        
+        # Create seller profile
+        Seller.objects.create(
+            user=instance,
+            business_name=business_name,
+            business_registration=business_reg,
+            description="Welcome to our marketplace! Please update your business description and start adding products.",
+            status=Seller.Status.ACTIVE
+        )
+        
+        # Clean up temporary attribute
+        if hasattr(instance, '_business_name'):
+            delattr(instance, '_business_name')
 
 
 @receiver(post_save, sender=Order)

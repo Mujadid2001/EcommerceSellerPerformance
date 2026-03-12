@@ -1,0 +1,181 @@
+/* Custom CSS for Performance App */
+
+:root {
+    --primary-color: #00FFFF; /* Cyan */
+    --secondary-color: #000000; /* Black */
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --background-color: #000000; /* Black background */
+    --text-color: #00FFFF; /* Cyan text */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--primary-color);
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 255, 255, 0.075);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 255, 255, 0.15);
+}
+
+/* Badges */
+.badge-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+/* Performance Score */
+.performance-score {
+    font-size: 3rem;
+    font-weight: bold;
+}
+
+.score-success {
+    color: var(--success-color);
+}
+
+.score-warning {
+    color: var(--warning-color);
+}
+
+.score-danger {
+    color: var(--danger-color);
+}
+
+/* Progress Bars */
+.progress {
+    border-radius: 0.5rem;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Tables */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 255, 255, 0.025);
+}
+
+/* Navbar */
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-active {
+    background-color: var(--success-color);
+}
+
+.status-under-review {
+    background-color: var(--warning-color);
+}
+
+.status-suspended {
+    background-color: var(--danger-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .display-5 {
+        font-size: 1.5rem;
+    }
+    
+    .display-6 {
+        font-size: 1.25rem;
+    }
+}
+
+/* Star Ratings */
+.star-rating {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+/* Metric Cards */
+.metric-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.metric-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Loading Spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Tooltips */
+.tooltip-inner {
+    max-width: 300px;
+}

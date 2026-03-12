@@ -41,23 +41,28 @@ class OrderQuerySet(models.QuerySet):
     def calculate_metrics_for_seller(self, seller):
         """
         Calculate comprehensive order metrics for a seller.
-        Returns a dictionary with all computed metrics.
+        Returns a dictionary with all computed metrics as Decimal for consistency.
         """
         orders = self.for_seller(seller)
         completed_orders = orders.completed()
+        
+        # Get aggregated values
+        total_sales = completed_orders.aggregate(
+            total=Sum('order_amount')
+        )['total']
+        
+        avg_delivery = orders.filter(
+            delivery_days__isnull=False
+        ).aggregate(
+            avg=Avg('delivery_days')
+        )['avg']
         
         metrics = {
             'total_orders': orders.count(),
             'completed_orders': completed_orders.count(),
             'returned_orders': orders.returned().count(),
-            'total_sales_volume': completed_orders.aggregate(
-                total=Sum('order_amount')
-            )['total'] or Decimal('0.00'),
-            'average_delivery_days': orders.filter(
-                delivery_days__isnull=False
-            ).aggregate(
-                avg=Avg('delivery_days')
-            )['avg'] or Decimal('0.00'),
+            'total_sales_volume': Decimal(str(total_sales)) if total_sales else Decimal('0.00'),
+            'average_delivery_days': Decimal(str(avg_delivery)) if avg_delivery else Decimal('0.00'),
         }
         
         # Calculate return rate

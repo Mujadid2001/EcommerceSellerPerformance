@@ -11,6 +11,8 @@ from django.contrib.auth import login, logout, get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from apps.authentication.serializers import (
     UserRegistrationSerializer, UserLoginSerializer, UserSerializer,
     UserUpdateSerializer, ChangePasswordSerializer, LoginLogSerializer,
@@ -23,13 +25,17 @@ from apps.authentication.email_utils import (
 from apps.authentication.permissions import IsAdmin
 from apps.authentication.utils import get_client_ip
 from apps.authentication.tasks import send_verification_email_task
-from django_q.tasks import async_task
+
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
 class AuthenticationViewSet(viewsets.ViewSet):
-    """ViewSet for authentication operations."""
+    """
+    ViewSet for authentication operations.
+    Public endpoints for registration, login, and email verification.
+    """
+    permission_classes = [AllowAny]  # Override default permissions for all actions
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def register(self, request):
@@ -54,39 +60,29 @@ class AuthenticationViewSet(viewsets.ViewSet):
                     
                     logger.info(f"New user registered: {user.email} as {user.role}")
                 
-                # Send email asynchronously using Django-Q
-                # This prevents blocking the HTTP response
+                # Send email synchronously
+                # For production, consider using Celery or similar for async email sending
                 # If email fails, user is still created and can request resend
                 email_sent = False
                 try:
-                    # Queue the email task for background processing
-                    async_task(
-                        'apps.authentication.tasks.send_verification_email_task',
-                        user.id,
-                        token.id,
-                        task_name=f'verification_email_{user.email}',
-                    )
+                    # Send verification email
+                    send_verification_email_task(user.id, token.id)
                     email_sent = True
-                    logger.info(f"Verification email queued for {user.email}")
+                    logger.info(f"Verification email sent for {user.email}")
                 except Exception as e:
-                    # Email queue failed but user is created
-                    logger.error(f"Failed to queue verification email for {user.email}: {str(e)}")
+                    # Email send failed but user is created
+                    logger.error(f"Failed to send verification email for {user.email}: {str(e)}")
                     email_sent = False
                 
                 # Prepare response message
-                if user.role == User.Role.ADMIN:
-                    message = _('Registration successful! Your account is admin account')
-                else:
-                    message = _('Registration successful. Please check your email to verify your account.')
-                    if not email_sent:
-                        message = _('Registration successful, but verification email could not be sent. Please request a new verification email.')
-                
+                message = _('Registration successful. Please check your email to verify your account.')
+                if not email_sent:
+                    message = _('Registration successful, but verification email could not be sent. Please request a new verification email.')
                 return Response(
                     {
                         'message': message,
                         'user': UserSerializer(user).data,
-                        'email_sent': email_sent,
-                        'requires_approval': user.role == User.Role.TEACHER and not user.is_approved
+                        'email_sent': email_sent
                     },
                     status=status.HTTP_201_CREATED
                 )
@@ -122,15 +118,7 @@ class AuthenticationViewSet(viewsets.ViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Check if teacher account is approved
-            if user.role == User.Role.TEACHER and not user.is_approved:
-                return Response(
-                    {
-                        'error': _('Your teacher account is pending admin approval. Please wait for approval to access the system.'),
-                        'requires_approval': True
-                    },
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # No teacher approval logic needed
 
             # Log successful login
             LoginLog.objects.create(
@@ -140,21 +128,18 @@ class AuthenticationViewSet(viewsets.ViewSet):
                 success=True
             )
 
-            # Generate JWT tokens
-            from rest_framework_simplejwt.tokens import RefreshToken
-            refresh = RefreshToken.for_user(user)
-            
+            # Login user with session authentication (not JWT)
             login(request, user)
+            
+            # Update last login timestamp
+            user.update_last_login()
+            
             logger.info(f"User logged in: {user.email}")
 
             return Response(
                 {
                     'message': _('Login successful.'),
                     'user': UserSerializer(user).data,
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh)
-                    },
                     'is_verified': user.is_verified
                 },
                 status=status.HTTP_200_OK
@@ -360,88 +345,7 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         logger.info(f"User deactivated: {user.email}")
         return Response({'message': _('User deactivated.')})
     
-    @action(detail=True, methods=['post'])
-    def approve_teacher(self, request, pk=None):
-        """Approve a pending teacher account."""
-        user = self.get_object()
-        
-        if user.role != User.Role.TEACHER:
-            return Response(
-                {'error': _('User is not a teacher.')},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if user.is_approved:
-            return Response(
-                {'error': _('Teacher is already approved.')},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        user.is_approved = True
-        user.save()
-        
-        logger.info(f"Teacher approved: {user.email} by {request.user.email}")
-        
-        # Send approval notification email
-        email_sent = send_teacher_approval_email(user, approved_by=request.user)
-        
-        return Response({
-            'message': _('Teacher account approved successfully.'),
-            'user': UserSerializer(user).data,
-            'email_sent': email_sent
-        })
-    
-    @action(detail=True, methods=['post'])
-    def reject_teacher(self, request, pk=None):
-        """Reject a pending teacher account (delete)."""
-        user = self.get_object()
-        
-        if user.role != User.Role.TEACHER:
-            return Response(
-                {'error': _('User is not a teacher.')},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        email = user.email
-        user.delete()
-        
-        logger.info(f"Teacher rejected and deleted: {email} by {request.user.email}")
-        
-        # TODO: Send rejection notification email
-        
-        return Response({'message': _('Teacher account rejected and removed.')})
-    
-    @action(detail=False, methods=['get'])
-    def pending_teachers(self, request):
-        """Get list of teachers pending approval."""
-        pending = User.objects.filter(
-            role=User.Role.TEACHER,
-            is_approved=False
-        ).order_by('-created_at')
-        
-        serializer = UserSerializer(pending, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['post'])
-    def generate_teacher_code(self, request):
-        """Generate a new teacher verification code (deprecated - no longer used)."""
-        return Response(
-            {'error': _('Teacher verification codes are no longer used. Teachers must be approved by administrators.')},
-            status=status.HTTP_410_GONE
-        )
-        
-        return Response(
-            {'error': _('Teacher verification codes are no longer used. Teachers must be approved by administrators.')},
-            status=status.HTTP_410_GONE
-        )
-    
-    @action(detail=False, methods=['get'])
-    def verification_codes(self, request):
-        """Get list of all teacher verification codes (deprecated - no longer used)."""
-        return Response(
-            {'error': _('Teacher verification codes are no longer used. Teachers must be approved by administrators.')},
-            status=status.HTTP_410_GONE
-        )
+    # All teacher-related actions removed
     
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):
@@ -459,3 +363,31 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         response = super().destroy(request, *args, **kwargs)
         logger.info(f"User deleted: {email}")
         return response
+
+
+# Web views for authentication
+def login_view(request):
+    """Render login page."""
+    if request.user.is_authenticated:
+        return redirect('performance:dashboard')
+    return render(request, 'authentication/login.html')
+
+
+def register_view(request):
+    """Render registration page."""
+    if request.user.is_authenticated:
+        return redirect('performance:dashboard')
+    return render(request, 'authentication/register.html')
+
+
+def verify_email_view(request):
+    """Render email verification page."""
+    return render(request, 'authentication/email_verification.html')
+
+
+def logout_view(request):
+    """Logout user."""
+    from django.contrib.auth import logout as django_logout
+    django_logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('home')
