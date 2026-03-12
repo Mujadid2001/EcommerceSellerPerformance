@@ -63,25 +63,32 @@ class Command(BaseCommand):
         CustomerFeedback.objects.all().delete()
         Order.objects.all().delete()
         Seller.objects.all().delete()
-        User.objects.filter(is_superuser=False).delete()
+        # Clear all non-admin users
+        User.objects.filter(role__in=[User.Role.USER, User.Role.SELLER]).delete()
         self.stdout.write(self.style.WARNING('   Data cleared!'))
 
     def create_admin_user(self):
         """Create admin user"""
-        if not User.objects.filter(email='admin@example.com').exists():
-            admin = User.objects.create_user(
-                email='admin@example.com',
-                password='admin123',
-                first_name='Admin',
-                last_name='User',
-                role=User.Role.ADMIN,
-                is_staff=True,
-                is_superuser=True,
-                is_active=True,
-                is_verified=True,
-                is_approved=True
-            )
+        admin, created = User.objects.get_or_create(
+            email='admin@example.com',
+            defaults={
+                'first_name': 'Admin',
+                'last_name': 'User',
+                'role': User.Role.ADMIN,
+                'is_staff': True,
+                'is_superuser': True,
+                'is_active': True,
+                'is_verified': True,
+                'is_approved': True
+            }
+        )
+        
+        if created:
+            admin.set_password('admin123')
+            admin.save()
             self.stdout.write(f'👤 Created admin user: {admin.email}')
+        else:
+            self.stdout.write(f'👤 Admin user already exists: {admin.email}')
 
     def create_sellers(self, count):
         """Create sample sellers"""
@@ -109,25 +116,33 @@ class Command(BaseCommand):
         for i in range(min(count, len(business_names))):
             # Create user
             email = f'seller{i+1}@example.com'
-            user = User.objects.create_user(
+            user, created = User.objects.get_or_create(
                 email=email,
-                password='password123',
-                first_name=f'Seller{i+1}',
-                last_name='User',
-                role=User.Role.SELLER,
-                phone=f'+1234567890{i}',
-                is_active=True,
-                is_verified=True,
-                is_approved=True
+                defaults={
+                    'password': 'password123',
+                    'first_name': f'Seller{i+1}',
+                    'last_name': 'User',
+                    'role': User.Role.SELLER,
+                    'phone': f'+1234567890{i}',
+                    'is_active': True,
+                    'is_verified': True,
+                    'is_approved': True
+                }
             )
             
+            if created:
+                user.set_password('password123')
+                user.save()
+            
             # Create seller profile
-            seller = Seller.objects.create(
+            seller, seller_created = Seller.objects.get_or_create(
                 user=user,
-                business_name=business_names[i],
-                business_registration=f'BR{1000 + i}',
-                description=random.choice(descriptions),
-                status='active'
+                defaults={
+                    'business_name': business_names[i],
+                    'business_registration': f'BR{1000 + i}',
+                    'description': random.choice(descriptions),
+                    'status': 'active'
+                }
             )
             
             sellers.append(seller)
@@ -188,7 +203,7 @@ class Command(BaseCommand):
             # Generate order number
             order_number = f"{seller.business_name[:3].upper()}-{1000 + i}"
             
-            order = Order.objects.create(
+            order = Order(
                 seller=seller,
                 order_number=order_number,
                 customer_email=customer,
@@ -197,8 +212,10 @@ class Command(BaseCommand):
                 shipped_date=shipped_date,
                 delivered_date=delivered_date,
                 status=status,
-                return_reason='Product not as expected' if status == 'returned' else None
+                return_reason='Product not as expected' if status == 'returned' else ''
             )
+            # Skip validation during data seeding
+            order.save(skip_validation=True)
             
             orders.append(order)
             

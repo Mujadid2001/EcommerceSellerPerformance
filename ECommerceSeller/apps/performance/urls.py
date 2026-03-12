@@ -2,14 +2,23 @@
 URL Configuration for performance app
 """
 from django.urls import path
-from apps.performance import views
+from apps.performance import views, enhanced_views
 
 app_name = 'performance'
 
 urlpatterns = [
-    # Web views
+    # Web views - Enhanced with AI Integration
     path('', views.marketplace_view, name='marketplace'),
-    path('dashboard/', views.seller_dashboard, name='dashboard'),
+    path('dashboard/', enhanced_views.enhanced_seller_dashboard, name='dashboard'),
+    path('dashboard/report/', enhanced_views.seller_performance_report, name='seller_report'),
+    path('dashboard/report/download/', enhanced_views.download_seller_report, name='download_report'),
+    path('dashboard/ai-insights/', enhanced_views.ai_insights_view, name='ai_insights'),
+    
+    # AI Insight Management
+    path('insights/<int:insight_id>/acknowledge/', enhanced_views.acknowledge_insight, name='acknowledge_insight'),
+    path('alerts/<int:alert_id>/acknowledge/', enhanced_views.acknowledge_alert, name='acknowledge_alert'),
+    
+    # Original views
     path('seller/<int:seller_id>/', views.seller_public_profile, name='seller_profile'),
     path('orders/', views.orders_view, name='orders'),
     path('profile/', views.profile_view, name='profile'),

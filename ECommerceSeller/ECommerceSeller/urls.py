@@ -13,6 +13,7 @@ def home_view(request):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("admin-dashboard/", include("apps.performance.admin_urls")),  # Custom admin interface
     path("", home_view, name="home"),
     path("marketplace/", include("apps.performance.urls")),
     path("auth/", include("apps.authentication.urls")),

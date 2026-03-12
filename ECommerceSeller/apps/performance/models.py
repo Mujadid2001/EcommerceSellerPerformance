@@ -4,11 +4,10 @@ Performance models for seller evaluation system
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal
-
-from apps.performance.managers import SellerManager, OrderManager
 
 
 class Seller(models.Model):
@@ -105,8 +104,6 @@ class Seller(models.Model):
         blank=True,
         help_text=_('Last performance evaluation timestamp')
     )
-    
-    objects = SellerManager()
     
     class Meta:
         verbose_name = _('Seller')
@@ -225,13 +222,12 @@ class Order(models.Model):
     )
     return_reason = models.TextField(
         blank=True,
+        null=True,
         help_text=_('Reason for return')
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    objects = OrderManager()
     
     class Meta:
         verbose_name = _('Order')
@@ -256,9 +252,6 @@ class Order(models.Model):
     
     def clean(self):
         """Validate order dates."""
-        from django.core.exceptions import ValidationError
-        from django.utils import timezone
-        
         errors = {}
         
         # Validate shipped_date is not in the future

@@ -37,10 +37,12 @@ class OptimizedBaseViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         """Get appropriate serializer based on action"""
-        return self.serializer_classes.get(
-            self.action,
-            self.serializer_classes.get('default', super().get_serializer_class())
-        )
+        if hasattr(self, 'serializer_classes') and self.serializer_classes:
+            return self.serializer_classes.get(
+                self.action,
+                self.serializer_classes.get('default', self.serializer_class)
+            )
+        return self.serializer_class
     
     def get_queryset(self):
         """Override to add common optimizations"""
@@ -69,6 +71,9 @@ class OrderViewSet(OptimizedBaseViewSet):
     Optimized ViewSet for Order management with comprehensive features
     """
     
+    # Default serializer class
+    serializer_class = OrderListSerializer
+    
     # Serializer configuration
     serializer_classes = {
         'list': OrderListSerializer,
@@ -76,6 +81,8 @@ class OrderViewSet(OptimizedBaseViewSet):
         'update': OrderUpdateSerializer,
         'partial_update': OrderUpdateSerializer,
         'retrieve': OrderDetailSerializer,
+        'my_orders': OrderListSerializer,
+        'statistics': OrderListSerializer,
         'default': OrderListSerializer
     }
     
@@ -272,6 +279,9 @@ class SellerViewSet(OptimizedBaseViewSet):
     """
     
     permission_classes = [IsAuthenticated]  # TODO: Add IsSellerOwner when permissions are created
+    
+    # Default serializer class
+    serializer_class = SellerListSerializer
     
     # Serializer configuration
     serializer_classes = {

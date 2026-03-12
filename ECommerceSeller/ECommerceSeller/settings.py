@@ -20,12 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-bu8j(de+*&&1v1o5q=mxa@b(u8t14z6bq2%rwak)1+p!6kn%dm"
+import os
+SECRET_KEY = os.environ.get('SECRET_KEY', "django-insecure-bu8j(de+*&&1v1o5q=mxa@b(u8t14z6bq2%rwak)1+p!6kn%dm")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -40,10 +41,13 @@ INSTALLED_APPS = [
     # Third party
     "rest_framework",
     "corsheaders",
-    # "django_filters",  # TODO: Install django-filter package
+    "django_filters",
+    "import_export",
     # Custom apps
     "apps.authentication",
     "apps.performance",
+    "apps.audit_trail",
+    "apps.ai_insights",
 ]
 
 MIDDLEWARE = [
@@ -53,6 +57,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.authentication.middleware.AuditTrailMiddleware",  # Custom audit logging
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -153,11 +158,11 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
-    # 'DEFAULT_FILTER_BACKENDS': [
-    #     'django_filters.rest_framework.DjangoFilterBackend',
-    #     'rest_framework.filters.SearchFilter',
-    #     'rest_framework.filters.OrderingFilter',
-    # ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
@@ -192,6 +197,126 @@ CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
 # Email Configuration
 # For development, use console backend to see emails in terminal
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# ==================== SECURITY SETTINGS ====================
+# Security configurations following industry best practices
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Session Security
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Password validation enhancement
+AUTH_PASSWORD_VALIDATORS += [
+    {
+        'NAME': 'django.contrib.auth.password_validation.AttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'email', 'first_name', 'last_name'),
+            'max_similarity': 0.7,
+        }
+    },
+]
+
+# ==================== LOGGING CONFIGURATION ====================
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'maxBytes': 1024*1024*10,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'audit_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'audit.log',
+            'maxBytes': 1024*1024*10,  # 10MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'apps': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'audit': {
+            'handlers': ['audit_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Ensure logs directory exists
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# ==================== CACHING ====================
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Cache timeout
+CACHE_TTL = 60 * 15  # 15 minutes
+
+# ==================== FILE UPLOAD SETTINGS ====================
+# File upload settings for performance data
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+# Allowed file extensions for data import
+ALLOWED_IMPORT_EXTENSIONS = ['.csv', '.xlsx', '.json']
+MAX_IMPORT_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+# ==================== EXPORT SETTINGS ====================
+# PDF Export settings
+EXPORT_ROOT = BASE_DIR / 'exports'
+os.makedirs(EXPORT_ROOT, exist_ok=True)
+
+# ==================== AI MODULE SETTINGS ====================
+# AI Insights Configuration
+AI_INSIGHTS_ENABLED = True
+AI_MODEL_UPDATE_INTERVAL = 3600  # 1 hour
+AI_PREDICTION_CACHE_TIMEOUT = 1800  # 30 minutes
+
+# Performance thresholds for AI alerts
+AI_PERFORMANCE_ALERT_THRESHOLD = 60  # Score below 60 triggers alert
+AI_TREND_ANALYSIS_DAYS = 30  # Days to analyze for trends
+
+# ==================== IMPORT/EXPORT SETTINGS ====================
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+IMPORT_EXPORT_SKIP_ADMIN_LOG = False
 
 # For production, configure SMTP settings:
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
