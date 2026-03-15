@@ -107,13 +107,16 @@ class AuthenticationViewSet(viewsets.ViewSet):
             user = serializer.validated_data['user']
             ip = get_client_ip(request)
 
-            # Check if email is verified (mandatory in production, optional in development)
+            # Check if email is verified (required unless explicitly disabled in .env)
             from django.conf import settings
-            if not user.is_verified and not settings.DEBUG:
+            email_verification_required = getattr(settings, 'EMAIL_VERIFICATION_REQUIRED', True)
+            
+            if not user.is_verified and email_verification_required:
                 return Response(
                     {
                         'error': _('Please verify your email address before logging in.'),
-                        'requires_verification': True
+                        'requires_verification': True,
+                        'message': _('A verification email has been sent to your registered email address. Please check your inbox and click the verification link.')
                     },
                     status=status.HTTP_403_FORBIDDEN
                 )

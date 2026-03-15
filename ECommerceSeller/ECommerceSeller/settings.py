@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -196,7 +201,17 @@ CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
 
 # Email Configuration
 # For development, use console backend to see emails in terminal
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', os.environ.get('EMAIL_HOST_USER', 'noreply@ecommerceseller.com'))
+
+# Email Verification Settings
+EMAIL_VERIFICATION_REQUIRED = os.environ.get('EMAIL_VERIFICATION_REQUIRED', 'True').lower() == 'true'
+EMAIL_VERIFICATION_TIMEOUT_HOURS = int(os.environ.get('EMAIL_VERIFICATION_TIMEOUT_HOURS', '24'))
 
 # ==================== SECURITY SETTINGS ====================
 # Security configurations following industry best practices
@@ -214,9 +229,9 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Password validation enhancement
 AUTH_PASSWORD_VALIDATORS += [
     {
-        'NAME': 'django.contrib.auth.password_validation.AttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
         'OPTIONS': {
-            'user_attributes': ('username', 'email', 'first_name', 'last_name'),
+            'user_attributes': ('email', 'first_name', 'last_name'),
             'max_similarity': 0.7,
         }
     },
