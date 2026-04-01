@@ -104,7 +104,7 @@ def enhanced_seller_dashboard(request):
         'available_periods': [7, 30, 90, 365],
     }
     
-    return render(request, 'performance/enhanced_dashboard.html', context)
+    return render(request, 'performance/dashboard.html', context)
 
 
 @login_required

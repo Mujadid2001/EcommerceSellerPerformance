@@ -4,12 +4,331 @@
 {% block title %}Orders Management{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'performance/css/orders.css' %}">
+<style>
+    .orders-header {
+        background: linear-gradient(135deg, #3861fb 0%, #0d47a1 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .orders-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .orders-header .btn {
+        background-color: white;
+        color: #3861fb;
+        border: none;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .orders-header .btn:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .filter-bar {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .filter-bar .row {
+        align-items: flex-end;
+    }
+
+    .filter-label {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-select, .form-control {
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: #3861fb;
+        box-shadow: 0 0 0 0.2rem rgba(56, 97, 251, 0.25);
+    }
+
+    .btn-filter {
+        background-color: #3861fb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-filter:hover {
+        background-color: #0d47a1;
+        color: white;
+    }
+
+    .btn-reset {
+        background-color: white;
+        color: #666;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-reset:hover {
+        background-color: #f8f9fa;
+        border-color: #3861fb;
+    }
+
+    .orders-table-container {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .orders-table {
+        width: 100%;
+        margin: 0;
+    }
+
+    .orders-table thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .orders-table th {
+        padding: 1rem;
+        font-weight: 600;
+        color: #333;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+
+    .orders-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+    }
+
+    .orders-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .order-id {
+        font-weight: 600;
+        color: #3861fb;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+
+    .status-processing {
+        background-color: #e3f2fd;
+        color: #1565c0;
+    }
+
+    .status-shipped {
+        background-color: #f3e5f5;
+        color: #6a1b9a;
+    }
+
+    .status-delivered {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .status-cancelled {
+        background-color: #ffebee;
+        color: #c62828;
+    }
+
+    .status-returned {
+        background-color: #fce4ec;
+        color: #c2185b;
+    }
+
+    .returned-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background-color: #ffebee;
+        color: #c62828;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-buttons .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
+
+    .btn-edit {
+        background-color: #3861fb;
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-edit:hover {
+        background-color: #0d47a1;
+    }
+
+    .btn-delete {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-delete:hover {
+        background-color: #c82333;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        color: #999;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-header-custom {
+        background: linear-gradient(135deg, #3861fb 0%, #0d47a1 100%);
+        color: white;
+        border: none;
+    }
+
+    .modal-title-custom {
+        font-weight: 700;
+    }
+
+    .form-group-custom {
+        margin-bottom: 1rem;
+    }
+
+    .form-label-custom {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.95rem;
+    }
+
+    .form-control-custom {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control-custom:focus {
+        border-color: #3861fb;
+        box-shadow: 0 0 0 0.2rem rgba(56, 97, 251, 0.25);
+        outline: none;
+    }
+
+    .modal-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .action-stats {
+        display: flex;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #3861fb;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.5rem;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="orders-page">
-    <div class="container py-4">
+<div class="container-fluid py-4">
         <!-- Header Section -->
         <div class="page-header text-center mb-4">
             <h1 class="page-title">

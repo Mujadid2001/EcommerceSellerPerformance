@@ -33,6 +33,9 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Production environment flag
+IS_PRODUCTION = not DEBUG
+
 
 # Application definition
 
@@ -48,7 +51,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "import_export",
+    "drf_spectacular",  # API documentation
+    "django_celery_beat",  # Celery periodic tasks
+    "django_celery_results",  # Celery result backend
     # Custom apps
+    "apps.core",  # Shared utilities and validators
     "apps.authentication",
     "apps.performance",
     "apps.audit_trail",
@@ -62,6 +69,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Custom commercial-grade middlewares
+    "ECommerceSeller.security_middleware.RequestIDMiddleware",  # Request tracing
+    "ECommerceSeller.security_middleware.SecurityHeadersMiddleware",  # Security headers
     "apps.authentication.middleware.AuditTrailMiddleware",  # Custom audit logging
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -149,25 +159,34 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom User Model
 AUTH_USER_MODEL = "authentication.User"
 
-# REST Framework Configuration
+# REST Framework Configuration - Commercial Grade
 REST_FRAMEWORK = {
+    # Pagination
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    
+    # Authentication & Permission
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    
+    # Rendering
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    
+    # Filtering and Search
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    
+    # Rate Throttling
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
@@ -175,7 +194,13 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour'
-    }
+    },
+    
+    # Custom Exception Handler - Returns standardized JSON responses
+    'EXCEPTION_HANDLER': 'ECommerceSeller.api_exception_handler.custom_exception_handler',
+    
+    # API Documentation
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # CORS Configuration
@@ -197,7 +222,7 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_SECURE = IS_PRODUCTION  # Set to True in production with HTTPS
 
 # Email Configuration
 # For development, use console backend to see emails in terminal
@@ -219,8 +244,16 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
+# Additional Security Headers for Production
+if IS_PRODUCTION:
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Session Security
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = IS_PRODUCTION  # Set to True in production with HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
@@ -357,3 +390,59 @@ EMAIL_TIMEOUT = 10
 
 # Login URL
 LOGIN_REDIRECT_URL = '/dashboard/'
+
+# ==================== CELERY CONFIGURATION ====================
+# Celery Configuration for async tasks
+# For local development: CELERY_TASK_ALWAYS_EAGER=True executes tasks immediately without Redis
+# For production: Use actual broker URL (redis://localhost:6379/0)
+
+# Support for eager task execution in local development (no Redis required)
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'True').lower() == 'true'
+CELERY_TASK_EAGER_PROPAGATES = os.environ.get('CELERY_TASK_EAGER_PROPAGATES', 'True').lower() == 'true'
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'memory://')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'cache+memory://')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 28 * 60  # 28 minutes (grace period)
+
+# Celery Beat Schedule for periodic tasks
+CELERY_BEAT_SCHEDULE = {
+    'run-ai-analysis-hourly': {
+        'task': 'apps.ai_insights.tasks.run_ai_analysis_batch',
+        'schedule': 3600.0,  # Every hour
+    },
+    'recalculate-seller-performance-daily': {
+        'task': 'apps.performance.tasks.recalculate_all_seller_performance',
+        'schedule': 86400.0,  # Every day
+    },
+    'generate-performance-reports-daily': {
+        'task': 'apps.performance.tasks.generate_daily_reports',
+        'schedule': 86400.0,  # Every day at midnight
+        'kwargs': {'time': '00:00'},
+    },
+    'cleanup-expired-tokens': {
+        'task': 'apps.authentication.tasks.cleanup_expired_verification_tokens',
+        'schedule': 3600.0,  # Every hour
+    },
+}
+
+# DRF Spectacular Configuration (API Documentation)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ECommerce Seller Performance API',
+    'DESCRIPTION': 'Comprehensive API for managing e-commerce seller performance',
+    'VERSION': '1.0.0',
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Development'},
+        {'url': 'http://127.0.0.1:8000', 'description': 'Local'},
+    ],
+    'AUTHENTICATION_WHITELIST': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'COMPONENT_NO_READ_ONLY_REQUIRED': True,
+}

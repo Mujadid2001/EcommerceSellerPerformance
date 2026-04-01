@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}E-Commerce Seller Performance Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e8eef7 100%);
+        padding: 5rem 0;
+        border-bottom: 3px solid #3861fb;
+    }
+
+    .hero h1 {
+        color: #1a1a1a;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        font-size: 3rem;
+    }
+
+    .hero p {
+        color: #666;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        line-height: 1.8;
+    }
+
+    .btn-hero {
+        padding: 0.9rem 2rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-hero-primary {
+        background-color: #3861fb;
+        color: white;
+        border: none;
+    }
+
+    .btn-hero-primary:hover {
+        background-color: #0d47a1;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(56, 97, 251, 0.3);
+    }
+
+    .btn-hero-secondary {
+        background-color: white;
+        color: #3861fb;
+        border: 2px solid #3861fb;
+    }
+
+    .btn-hero-secondary:hover {
+        background-color: #f0f4ff;
+        transform: translateY(-2px);
+    }
+
+    .stats-box {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .stats-box:hover {
+        box-shadow: 0 8px 16px rgba(56, 97, 251, 0.1);
+        border-color: #3861fb;
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #3861fb;
+        margin: 1rem 0;
+    }
+
+    .stats-label {
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+    .feature-section {
+        padding: 4rem 0;
+        background: white;
+    }
+
+    .feature-title {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .feature-title h2 {
+        color: #1a1a1a;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .feature-title p {
+        color: #666;
+        font-size: 1.1rem;
+    }
+
+    .feature-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(56, 97, 251, 0.15);
+        border-color: #3861fb;
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        color: #3861fb;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card h4 {
+        color: #1a1a1a;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+        color: #666;
+        font-size: 0.95rem;
+    }
+
+    .seller-grid {
+        margin-top: 2rem;
+    }
+
+    .seller-card-home {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .seller-card-home:hover {
+        box-shadow: 0 8px 20px rgba(56, 97, 251, 0.15);
+        border-color: #3861fb;
+    }
+
+    .seller-card-header {
+        background: linear-gradient(135deg, #3861fb 0%, #0d47a1 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+
+    .seller-card-body {
+        padding: 1.5rem;
+    }
+
+    .seller-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .seller-score {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1rem 0;
+    }
+
+    .score-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .score-value {
+        font-weight: 700;
+        color: #3861fb;
+        font-size: 1.2rem;
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, #3861fb 0%, #0d47a1 100%);
+        color: white;
+        padding: 4rem 0;
+        text-align: center;
+    }
+
+    .cta-section h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .cta-section p {
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+
+    .gap-3 > * {
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h1>Seller Performance Management Platform</h1>
+                <p>Monitor your e-commerce performance with AI-powered insights. Track metrics, manage orders, and receive reviews all in one place.</p>
+                
+                <div class="d-flex flex-wrap gap-3">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'performance:dashboard' %}" class="btn btn-hero btn-hero-primary">
+                            <i class="bi bi-speedometer2"></i> Go to Dashboard
+                        </a>
+                        <a href="{% url 'performance:marketplace' %}" class="btn btn-hero btn-hero-secondary">
+                            <i class="bi bi-shop-window"></i> Browse Sellers
+                        </a>
+                    {% else %}
+                        <a href="{% url 'auth-register' %}" class="btn btn-hero btn-hero-primary">
+                            <i class="bi bi-rocket-takeoff"></i> Get Started Free
+                        </a>
+                        <a href="{% url 'performance:marketplace' %}" class="btn btn-hero btn-hero-secondary">
+                            <i class="bi bi-shop-window"></i> Browse Sellers
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="stats-box">
+                            <i class="bi bi-shop" style="font-size: 2rem; color: #3861fb;"></i>
+                            <div class="stats-number">{{ total_sellers }}</div>
+                            <div class="stats-label">Active Sellers</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-box">
+                            <i class="bi bi-box-seam" style="font-size: 2rem; color: #3861fb;"></i>
+                            <div class="stats-number">{{ total_orders }}</div>
+                            <div class="stats-label">Orders</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-box">
+                            <i class="bi bi-graph-up" style="font-size: 2rem; color: #3861fb;"></i>
+                            <div class="stats-number">{{ average_score|floatformat:0 }}</div>
+                            <div class="stats-label">Avg. Score</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stats-box">
+                            <i class="bi bi-star" style="font-size: 2rem; color: #ffc107;"></i>
+                            <div class="stats-number">{{ total_feedback }}</div>
+                            <div class="stats-label">Reviews</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="feature-section bg-light">
+    <div class="container">
+        <div class="feature-title">
+            <h2>Comprehensive Features</h2>
+            <p>Everything you need to manage your e-commerce business efficiently</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-speedometer2 feature-icon"></i>
+                    <h4>Real-Time Analytics</h4>
+                    <p>Track performance scores, sales metrics, delivery speed, and customer satisfaction in real-time.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-star-fill feature-icon" style="color: #ffc107;"></i>
+                    <h4>Customer Reviews</h4>
+                    <p>Collect and manage customer feedback. Customers can leave reviews without needing an account.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-box-seam feature-icon"></i>
+                    <h4>Order Management</h4>
+                    <p>Add, track, and manage all your orders. Monitor delivery status and handle returns easily.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-graph-up feature-icon"></i>
+                    <h4>AI Insights</h4>
+                    <p>Get AI-powered recommendations to improve your performance and competitive positioning.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-file-earmark-pdf feature-icon"></i>
+                    <h4>Performance Reports</h4>
+                    <p>Download detailed reports with metrics, analysis, and actionable recommendations.</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <i class="bi bi-shield-check feature-icon"></i>
+                    <h4>Secure Platform</h4>
+                    <p>Enterprise-grade security with CSRF protection, encrypted data, and secure authentication.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Top Sellers Section -->
+{% if top_sellers %}
+<section class="feature-section">
+    <div class="container">
+        <div class="feature-title">
+            <h2>Top Performing Sellers</h2>
+            <p>Learn from the best sellers in our marketplace</p>
+        </div>
+
+        <div class="row g-4 seller-grid">
+            {% for seller in top_sellers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="seller-card-home">
+                    <div class="seller-card-header">
+                        <h5 class="mb-0">{{ seller.business_name }}</h5>
+                        <small style="opacity: 0.9;">
+                            <i class="bi bi-geo-alt"></i> Active Seller
+                        </small>
+                    </div>
+                    <div class="seller-card-body">
+                        {% if seller.description %}
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            {{ seller.description|truncatewords:15 }}
+                        </p>
+                        {% endif %}
+
+                        <div class="seller-score">
+                            <span class="score-label">Performance Score</span>
+                            <span class="score-value">{{ seller.performance_score|floatformat:1 }}/100</span>
+                        </div>
+
+                        <div class="progress" style="height: 6px; background-color: #e0e0e0;">
+                            <div class="progress-bar" style="width: {{ seller.performance_score }}%; background: linear-gradient(90deg, #3861fb 0%, #0d47a1 100%);"></div>
+                        </div>
+
+                        <div class="row g-2 mt-3">
+                            <div class="col-4 text-center">
+                                <small class="text-muted">Orders</small>
+                                <p class="mb-0 fw-bold">{{ seller.total_orders }}</p>
+                            </div>
+                            <div class="col-4 text-center">
+                                <small class="text-muted">Rating</small>
+                                <p class="mb-0 fw-bold">
+                                    <i class="bi bi-star-fill" style="color: #ffc107;"></i>
+                                    {{ seller.average_rating|floatformat:1 }}
+                                </p>
+                            </div>
+                            <div class="col-4 text-center">
+                                <small class="text-muted">Delivery</small>
+                                <p class="mb-0 fw-bold">{{ seller.average_delivery_days|floatformat:0 }}d</p>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'performance:seller_profile' seller.id %}" class="btn btn-sm w-100 mt-3" style="background-color: #3861fb; color: white; border: none;">
+                            <i class="bi bi-arrow-right"></i> View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <h2>Ready to Get Started?</h2>
+        <p>Join our platform and start tracking your seller performance today</p>
+        
+        {% if user.is_authenticated %}
+            <a href="{% url 'performance:dashboard' %}" class="btn btn-light btn-lg">
+                <i class="bi bi-speedometer2"></i> View Dashboard
+            </a>
+        {% else %}
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{% url 'auth-register' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-person-plus"></i> Create Account
+                </a>
+                <a href="{% url 'auth-login' %}" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-box-arrow-in-right"></i> Sign In
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -37,7 +37,7 @@ urlpatterns = [
     path('api/orders/my_orders/', views.OrderViewSet.as_view({'get': 'my_orders'}), name='order-my-orders'),
     
     # API endpoints - Feedback
-    path('api/feedback/', views.CustomerFeedbackViewSet.as_view({'get': 'list'}), name='feedback-list'),
+    path('api/feedback/', views.CustomerFeedbackViewSet.as_view({'get': 'list', 'post': 'create'}), name='feedback-list'),
     path('api/feedback/<int:pk>/', views.CustomerFeedbackViewSet.as_view({'get': 'retrieve'}), name='feedback-detail'),
     path('api/feedback/my_feedback/', views.CustomerFeedbackViewSet.as_view({'get': 'my_feedback'}), name='feedback-my-feedback'),
 ]

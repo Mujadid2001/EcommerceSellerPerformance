@@ -332,6 +332,7 @@ class CustomerFeedbackViewSet(OptimizedBaseViewSet):
     filter_backends = [filters.OrderingFilter]  # TODO: Add DjangoFilterBackend when django-filter is installed
     ordering_fields = ['rating', 'created_at']
     ordering = ['-created_at']
+    permission_classes = []  # Allow unauthenticated feedback submission
     
     def get_queryset(self):
         """Get feedback for current seller's orders"""
@@ -341,6 +342,82 @@ class CustomerFeedbackViewSet(OptimizedBaseViewSet):
         return CustomerFeedback.objects.filter(
             order__seller=self.request.user.seller_profile
         ).select_related('order', 'order__seller')
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Allow unauthenticated users to submit feedback.
+        Creates a generic feedback order if needed.
+        """
+        from django.utils import timezone
+        from rest_framework import status
+        from rest_framework.response import Response
+        
+        seller_id = request.data.get('seller_id')
+        order_id = request.data.get('order_id')
+        customer_email = request.data.get('customer_email')
+        customer_name = request.data.get('customer_name', 'Anonymous')
+        
+        # Validate seller exists
+        try:
+            seller = Seller.objects.get(id=seller_id)
+        except Seller.DoesNotExist:
+            return Response(
+                {'error': 'Seller not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get or create a generic feedback order if order_id not provided
+        if order_id:
+            try:
+                order = Order.objects.get(id=order_id, seller=seller)
+            except Order.DoesNotExist:
+                return Response(
+                    {'error': 'Order not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Create or get a generic feedback order
+            order, _ = Order.objects.get_or_create(
+                seller=seller,
+                order_number=f'GENERAL_FEEDBACK_{seller.id}',
+                defaults={
+                    'customer_email': customer_email,
+                    'status': 'completed',
+                    'order_date': timezone.now(),
+                    'expected_delivery': timezone.now(),
+                    'amount': 0,  # No amount for feedback-only orders
+                }
+            )
+        
+        # Create feedback
+        feedback_data = {
+            'seller': seller.id,
+            'order': order.id,
+            'customer_email': customer_email,
+            'rating': request.data.get('rating'),
+            'comment': request.data.get('comment', '')
+        }
+        
+        serializer = self.get_serializer(data=feedback_data)
+        if serializer.is_valid():
+            serializer.save()
+            
+            # Update seller's performance score
+            seller.calculate_performance_score()
+            
+            return Response(
+                {
+                    'id': serializer.data['id'],
+                    'message': 'Review submitted successfully',
+                    'seller_id': seller.id
+                },
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=False, methods=['get'])
     @method_decorator(cache_page(60 * 10))  # Cache for 10 minutes

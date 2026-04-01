@@ -1,4 +1,4 @@
-oro{% extends 'base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}{{ seller.business_name }}{% endblock %}
 
@@ -95,16 +95,403 @@ oro{% extends 'base.html' %}
         </div>
     </div>
 
+    <!-- Seller Information Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Seller Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Business Name</small>
+                                <h6>{{ seller.business_name }}</h6>
+                            </div>
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Contact Email</small>
+                                <h6><a href="mailto:{{ seller.user.email }}">{{ seller.user.email }}</a></h6>
+                            </div>
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Phone</small>
+                                <h6>{{ seller.phone_number|default:"Not provided" }}</h6>
+                            </div>
+                            <div class="info-item">
+                                <small class="text-muted d-block">Status</small>
+                                <span class="badge 
+                                    {% if seller.status == 'active' %}bg-success
+                                    {% elif seller.status == 'under_review' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ seller.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Location</small>
+                                <h6>{{ seller.address|default:"Not provided" }}</h6>
+                            </div>
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Registration Date</small>
+                                <h6>{{ seller.created_at|date:"M d, Y" }}</h6>
+                            </div>
+                            <div class="info-item mb-3">
+                                <small class="text-muted d-block">Total Products</small>
+                                <h6>{{ seller.total_products|default:"0" }} products</h6>
+                            </div>
+                            <div class="info-item">
+                                <small class="text-muted d-block">Seller Tier</small>
+                                <h6>
+                                    {% if seller.performance_score >= 4.5 %}
+                                        <span class="badge bg-warning text-dark">Premium</span>
+                                    {% elif seller.performance_score >= 4.0 %}
+                                        <span class="badge bg-info">Standard</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Basic</span>
+                                    {% endif %}
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    {% if seller.description %}
+                    <hr>
+                    <div>
+                        <small class="text-muted d-block mb-2">About Seller</small>
+                        <p class="mb-0">{{ seller.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Review Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Orders Review</h5>
+                        <small>Last 30 days</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-success">{{ metrics.completed_orders }}</h3>
+                                <small class="text-muted">Completed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-warning">{{ metrics.pending_orders|default:"0" }}</h3>
+                                <small class="text-muted">Pending</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-info">{{ metrics.shipped_orders|default:"0" }}</h3>
+                                <small class="text-muted">Shipped</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-danger">{{ metrics.cancelled_orders|default:"0" }}</h3>
+                                <small class="text-muted">Cancelled</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-danger">{{ metrics.returned_orders|default:"0" }}</h3>
+                                <small class="text-muted">Returned</small>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-center">
+                                <h3 class="text-primary">${{ metrics.total_sales_volume|floatformat:0 }}</h3>
+                                <small class="text-muted">Total Sales</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Order Performance Metrics</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <small class="text-muted">On-Time Delivery Rate</small>
+                                    <div class="d-flex justify-content-between">
+                                        <small>{{ metrics.on_time_delivery_rate|default:"0" }}%</small>
+                                        <div class="progress flex-grow-1 ms-2" style="height: 15px; width: 100px;">
+                                            <div class="progress-bar bg-success" style="width: {{ metrics.on_time_delivery_rate|default:"0" }}%"></div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="mb-2">
+                                    <small class="text-muted">Average Delivery Time</small>
+                                    <h6 class="mb-0">{{ metrics.average_delivery_days|floatformat:1 }} days</h6>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Customer Satisfaction</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <small class="text-muted">Average Rating</small>
+                                    <h6 class="mb-0">
+                                        {{ metrics.average_rating|floatformat:1 }}
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                        ({{ metrics.feedback_count }} reviews)
+                                    </h6>
+                                </li>
+                                <li class="mb-2">
+                                    <small class="text-muted">Return Rate</small>
+                                    <h6 class="mb-0">{{ metrics.return_rate|floatformat:1 }}%</h6>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-robot"></i> AI Insights & Analysis</h5>
+                        <small class="badge bg-light text-dark">Real-time</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-lightning-fill"></i> How AI Generates Insights
+                            </h6>
+                            <p class="text-muted small mb-3">
+                                Our AI system analyzes multiple data points in real-time to generate actionable insights about seller performance:
+                            </p>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="insight-process p-2 border-start border-success ps-3">
+                                        <small class="text-muted d-block"><strong>1. Data Collection</strong></small>
+                                        <small class="text-muted">Gathers order history, customer feedback, delivery metrics, and performance data</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="insight-process p-2 border-start border-info ps-3">
+                                        <small class="text-muted d-block"><strong>2. Data Processing</strong></small>
+                                        <small class="text-muted">Normalizes and processes data using machine learning algorithms</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="insight-process p-2 border-start border-warning ps-3">
+                                        <small class="text-muted d-block"><strong>3. Pattern Recognition</strong></small>
+                                        <small class="text-muted">Identifies trends, anomalies, and patterns in seller behavior</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="insight-process p-2 border-start border-primary ps-3">
+                                        <small class="text-muted d-block"><strong>4. Insight Generation</strong></small>
+                                        <small class="text-muted">Generates actionable recommendations and performance scores</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <h6 class="text-primary mb-3"><i class="bi bi-graph-up"></i> Generated Insights</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="insight-card p-3 border rounded bg-light">
+                                <h6 class="text-success mb-2">
+                                    <i class="bi bi-check-circle"></i> Performance Score
+                                </h6>
+                                <h4 class="text-success mb-2">{{ seller.performance_score|floatformat:1 }}/5.0</h4>
+                                <small class="text-muted">
+                                    {% if seller.performance_score >= 4.5 %}
+                                        Excellent performance tier
+                                    {% elif seller.performance_score >= 4.0 %}
+                                        Good performance tier
+                                    {% elif seller.performance_score >= 3.5 %}
+                                        Average performance tier
+                                    {% else %}
+                                        Needs improvement
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="insight-card p-3 border rounded bg-light">
+                                <h6 class="text-warning mb-2">
+                                    <i class="bi bi-exclamation-triangle"></i> Risk Factors
+                                </h6>
+                                <h4 class="text-warning mb-2">{{ metrics.return_rate|floatformat:1 }}%</h4>
+                                <small class="text-muted">
+                                    {% if metrics.return_rate > 10 %}
+                                        High return rate detected
+                                    {% elif metrics.return_rate > 5 %}
+                                        Moderate return rate
+                                    {% else %}
+                                        Low return rate - excellent
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="insight-card p-3 border rounded bg-light">
+                                <h6 class="text-info mb-2">
+                                    <i class="bi bi-trendy"></i> Trend Analysis
+                                </h6>
+                                <h4 class="text-info mb-2">{{ metrics.completed_orders }}</h4>
+                                <small class="text-muted">
+                                    Orders completed in selected period
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3"><i class="bi bi-lightbulb"></i> AI Recommendations</h6>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Smart Insights:</strong>
+                                {% if metrics.return_rate > 10 %}
+                                    <p class="mb-0">• Consider improving product quality or description accuracy to reduce return rate</p>
+                                {% endif %}
+                                {% if metrics.average_delivery_days > 7 %}
+                                    <p class="mb-0">• Speed up shipping processes to improve on-time delivery rate</p>
+                                {% endif %}
+                                {% if metrics.average_rating < 4.0 %}
+                                    <p class="mb-0">• Focus on customer service improvements to increase rating</p>
+                                {% endif %}
+                                {% if metrics.average_rating >= 4.5 and metrics.return_rate < 5 %}
+                                    <p class="mb-0">✓ Excellent seller! Maintain current standards and consider expanding product range</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <small class="text-muted d-block">
+                                <i class="bi bi-clock"></i> Last Updated: {{ last_analysis_date|date:"M d, Y H:i"|default:"Now" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Reviews Section -->
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-chat-left-quote"></i> Customer Reviews</h5>
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-chat-left-quote"></i> Customer Reviews ({{ recent_feedback|length }})</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Add Review Form -->
+                    <div class="alert alert-light border mb-4 p-4" style="background-color: #f8f9fa;">
+                        <h6 class="text-primary mb-3"><i class="bi bi-pencil-square"></i> Leave Your Review</h6>
+                        <form id="reviewForm" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="seller_id" value="{{ seller.id }}">
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="reviewName" class="form-label fw-600">Your Name</label>
+                                    <input type="text" class="form-control" id="reviewName" name="customer_name" 
+                                           placeholder="Enter your name" required>
+                                    <small class="text-muted">How should we credit your review?</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="reviewEmail" class="form-label fw-600">Email Address</label>
+                                    <input type="email" class="form-control" id="reviewEmail" name="customer_email" 
+                                           placeholder="your@email.com" required>
+                                    <small class="text-muted">Used to verify your purchase (not published)</small>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-600">Your Rating</label>
+                                    <div class="rating-input mb-2" id="ratingInput">
+                                        <input type="radio" name="rating" value="5" id="star5" required>
+                                        <label for="star5" class="star-label">
+                                            <i class="bi bi-star-fill text-warning"></i> 5 - Excellent
+                                        </label>
+                                        
+                                        <input type="radio" name="rating" value="4" id="star4">
+                                        <label for="star4" class="star-label">
+                                            <i class="bi bi-star-fill text-warning"></i> 4 - Very Good
+                                        </label>
+                                        
+                                        <input type="radio" name="rating" value="3" id="star3">
+                                        <label for="star3" class="star-label">
+                                            <i class="bi bi-star-fill text-warning"></i> 3 - Good
+                                        </label>
+                                        
+                                        <input type="radio" name="rating" value="2" id="star2">
+                                        <label for="star2" class="star-label">
+                                            <i class="bi bi-star-fill text-warning"></i> 2 - Fair
+                                        </label>
+                                        
+                                        <input type="radio" name="rating" value="1" id="star1">
+                                        <label for="star1" class="star-label">
+                                            <i class="bi bi-star-fill text-warning"></i> 1 - Poor
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label for="reviewComment" class="form-label fw-600">Your Review</label>
+                                    <textarea class="form-control" id="reviewComment" name="comment" rows="4" 
+                                              placeholder="Share your experience with this seller... (optional)"
+                                              maxlength="500"></textarea>
+                                    <small class="text-muted d-block mt-1"><span id="charCount">0</span>/500 characters</small>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="agreeTerms" name="agree_terms" required>
+                                        <label class="form-check-label" for="agreeTerms">
+                                            I confirm that I have purchased from this seller and this review is genuine
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send"></i> Submit Review
+                                    </button>
+                                    <button type="reset" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-clockwise"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <hr>
+
+                    <!-- Existing Reviews List -->
+                    <h6 class="mb-3 text-primary">
+                        <i class="bi bi-star-fill text-warning"></i> {{ recent_feedback|length }} Review{{ recent_feedback|length|pluralize }}
+                    </h6>
+                    
                     {% for feedback in recent_feedback %}
                     <div class="border-bottom pb-3 mb-3">
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
                                 <div class="text-warning mb-1">
                                     {% for i in "12345" %}
@@ -115,20 +502,127 @@ oro{% extends 'base.html' %}
                                         {% endif %}
                                     {% endfor %}
                                 </div>
-                                <small class="text-muted">Order: {{ feedback.order.order_number }}</small>
+                                <strong>{{ feedback.customer_email|default:"Anonymous Customer" }}</strong>
+                                <small class="text-muted d-block">Order: {{ feedback.order.order_number }}</small>
                             </div>
                             <small class="text-muted">{{ feedback.created_at|date:"M d, Y" }}</small>
                         </div>
                         {% if feedback.comment %}
-                        <p class="mt-2 mb-0">{{ feedback.comment }}</p>
+                        <p class="mt-2 mb-0 text-muted">{{ feedback.comment }}</p>
+                        {% else %}
+                        <p class="mt-2 mb-0 text-muted fst-italic">No comment provided</p>
                         {% endif %}
                     </div>
                     {% empty %}
-                    <p class="text-center text-muted">No reviews yet</p>
+                    <div class="alert alert-light text-center py-4">
+                        <i class="bi bi-chat-left" style="font-size: 2rem; color: #ccc;"></i>
+                        <p class="mt-3 text-muted">No reviews yet. Be the first to review this seller!</p>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .rating-input {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .rating-input input[type="radio"] {
+        display: none;
+    }
+    
+    .star-label {
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        user-select: none;
+    }
+    
+    .star-label:hover {
+        background-color: #f8f9fa;
+        border-color: #ffc107;
+    }
+    
+    .rating-input input[type="radio"]:checked + .star-label {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        font-weight: 600;
+    }
+</style>
+
+<script>
+// Character counter for review text
+const reviewComment = document.getElementById('reviewComment');
+const charCount = document.getElementById('charCount');
+
+if (reviewComment) {
+    reviewComment.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+}
+
+// Review form submission
+const reviewForm = document.getElementById('reviewForm');
+if (reviewForm) {
+    reviewForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            seller_id: this.querySelector('input[name="seller_id"]').value,
+            customer_name: this.querySelector('input[name="customer_name"]').value,
+            customer_email: this.querySelector('input[name="customer_email"]').value,
+            rating: this.querySelector('input[name="rating"]:checked').value,
+            comment: this.querySelector('textarea[name="comment"]').value,
+        };
+        
+        try {
+            const response = await fetch('/marketplace/api/feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    <i class="bi bi-check-circle"></i> <strong>Thank you!</strong> Your review has been submitted successfully.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                reviewForm.parentElement.insertBefore(alertDiv, reviewForm);
+                
+                // Reset form
+                reviewForm.reset();
+                charCount.textContent = '0';
+                
+                // Reload page after 2 seconds
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                const error = await response.json();
+                alert('Error submitting review: ' + (error.detail || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    });
+}
+</script>
 {% endblock %}
