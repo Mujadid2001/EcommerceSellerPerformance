@@ -105,14 +105,16 @@ def _recalculate_seller_performance(seller):
     Args:
         seller: Seller instance
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         # Refresh seller from database to avoid stale data
         seller.refresh_from_db()
         
         # Evaluate and assign status
         StatusAssignmentService.evaluate_and_assign(seller)
+        
     except Exception as e:
         # Log error but don't raise to avoid breaking the transaction
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error recalculating performance for seller {seller.id}: {str(e)}")
+        logger.exception(f"Error recalculating performance for seller {seller.id}: {str(e)}")

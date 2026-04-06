@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from decimal import Decimal
 
-from apps.performance.models import Seller, Order, CustomerFeedback
+from apps.performance.models import Seller, Order, CustomerFeedback, PerformanceConfig
 from apps.performance.services import PerformanceCalculationService, StatusAssignmentService
 
 
@@ -485,3 +485,136 @@ class CustomerFeedbackAdmin(admin.ModelAdmin):
         return timezone.localtime(obj.created_at).strftime('%Y-%m-%d %H:%M')
     created_at_display.short_description = _('Created')
     created_at_display.admin_order_field = 'created_at'
+
+
+@admin.register(PerformanceConfig)
+class PerformanceConfigAdmin(admin.ModelAdmin):
+    """Admin interface for PerformanceConfig (singleton) model.
+    
+    This is a singleton - there is only ONE instance. Admins edit
+    the scoring weights and thresholds here, and all performance
+    calculations automatically use these values.
+    """
+    
+    list_display = [
+        'created_at_display',
+        'updated_at_display',
+        'weights_summary',
+    ]
+    
+    readonly_fields = [
+        'instance_id',
+        'created_at',
+        'updated_at',
+        'weights_summary_display',
+        'thresholds_summary_display',
+    ]
+    
+    fieldsets = (
+        (_('Score Weights (must sum to 100%)'), {
+            'fields': ('weight_sales', 'weight_delivery', 'weight_rating', 'weight_returns'),
+            'description': _('Configure the percentage weight for each component of the performance score.'),
+        }),
+        (_('Sales Thresholds'), {
+            'fields': ('sales_threshold_excellent', 'sales_threshold_good', 'sales_threshold_low'),
+            'description': _('Set the sales amount thresholds for scoring.'),
+        }),
+        (_('Delivery Thresholds (days)'), {
+            'fields': (
+                'delivery_threshold_excellent',
+                'delivery_threshold_good',
+                'delivery_threshold_mid',
+                'delivery_threshold_slow'
+            ),
+            'description': _('Configure delivery time thresholds in days.'),
+        }),
+        (_('Return Rate Thresholds (%)'), {
+            'fields': (
+                'return_rate_threshold_excellent',
+                'return_rate_threshold_good',
+                'return_rate_threshold_mid',
+                'return_rate_threshold_max'
+            ),
+            'description': _('Set return rate percentage thresholds for scoring.'),
+        }),
+        (_('Status Thresholds (score points 0-100)'), {
+            'fields': ('status_threshold_active', 'status_threshold_under_review'),
+            'description': _('Performance score thresholds for seller status assignment.'),
+        }),
+        (_('Summary'), {
+            'fields': ('weights_summary_display', 'thresholds_summary_display'),
+            'classes': ('collapse',)
+        }),
+        (_('Metadata'), {
+            'fields': ('instance_id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_delete_permission(self, request):
+        """Prevent deletion of singleton config."""
+        return False
+    
+    def has_add_permission(self, request):
+        """Prevent adding new instances - singleton only."""
+        # Allow adding only if no instance exists
+        return PerformanceConfig.objects.count() == 0
+    
+    def weights_summary(self, obj):
+        """Show summary of weights in list view."""
+        total = obj.weight_sales + obj.weight_delivery + obj.weight_rating + obj.weight_returns
+        color = '#28a745' if total == 100 else '#dc3545'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">'
+            'S:{}% D:{}% R:{}% P:{}% (Total: {}%)</span>',
+            color,
+            obj.weight_sales,
+            obj.weight_delivery,
+            obj.weight_rating,
+            obj.weight_returns,
+            total
+        )
+    weights_summary.short_description = _('Score Weights')
+    
+    def weights_summary_display(self, obj):
+        """Display detailed weights summary for readonly field."""
+        total = obj.weight_sales + obj.weight_delivery + obj.weight_rating + obj.weight_returns
+        color = '#28a745' if total == 100 else '#dc3545'
+        html = f'<div style="color: {color}; font-weight: bold;">'
+        html += f'Sales: {obj.weight_sales}%<br>'
+        html += f'Delivery: {obj.weight_delivery}%<br>'
+        html += f'Rating: {obj.weight_rating}%<br>'
+        html += f'Returns: {obj.weight_returns}%<br>'
+        html += f'<strong>Total: {total}%</strong> (Must be 100%)</div>'
+        return format_html(html)
+    weights_summary_display.short_description = _('Weights Summary')
+    
+    def thresholds_summary_display(self, obj):
+        """Display detailed thresholds summary."""
+        html = '<div style="font-family: monospace; font-size: 12px;">'
+        html += '<strong>Sales:</strong> Excellent ≥ $' + f'{obj.sales_threshold_excellent:,.2f}' + ', '
+        html += 'Good ≥ $' + f'{obj.sales_threshold_good:,.2f}' + ', '
+        html += 'Low ≥ $' + f'{obj.sales_threshold_low:,.2f}' + '<br>'
+        html += '<strong>Delivery:</strong> Excellent ≤ ' + f'{obj.delivery_threshold_excellent}' + ' days, '
+        html += 'Good ≤ ' + f'{obj.delivery_threshold_good}' + ' days, '
+        html += 'Mid ≤ ' + f'{obj.delivery_threshold_mid}' + ' days, '
+        html += 'Slow > ' + f'{obj.delivery_threshold_slow}' + ' days<br>'
+        html += '<strong>Returns:</strong> Excellent ≤ ' + f'{obj.return_rate_threshold_excellent}' + '%, '
+        html += 'Good ≤ ' + f'{obj.return_rate_threshold_good}' + '%, '
+        html += 'Mid ≤ ' + f'{obj.return_rate_threshold_mid}' + '%, '
+        html += 'Max ≤ ' + f'{obj.return_rate_threshold_max}' + '%<br>'
+        html += '<strong>Status:</strong> Active ≥ ' + f'{obj.status_threshold_active}' + ' pts, '
+        html += 'Under Review ≥ ' + f'{obj.status_threshold_under_review}' + ' pts<br>'
+        html += '</div>'
+        return format_html(html)
+    thresholds_summary_display.short_description = _('Thresholds Summary')
+    
+    def created_at_display(self, obj):
+        """Display creation date formatted."""
+        return timezone.localtime(obj.created_at).strftime('%Y-%m-%d %H:%M')
+    created_at_display.short_description = _('Created')
+    
+    def updated_at_display(self, obj):
+        """Display update date formatted."""
+        return timezone.localtime(obj.updated_at).strftime('%Y-%m-%d %H:%M')
+    updated_at_display.short_description = _('Last Updated')

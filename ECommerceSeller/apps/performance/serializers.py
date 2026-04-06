@@ -20,8 +20,32 @@ class BaseModelSerializer(serializers.ModelSerializer):
     
     def validate_future_date(self, value, field_name="date"):
         """Validate that a date is not significantly in the future"""
-        if value and value > timezone.now() + timedelta(minutes=5):
-            raise serializers.ValidationError(f"{field_name.title()} cannot be in the future.")
+        if not value:
+            return value
+        
+        # Convert to timezone-aware datetime for comparison
+        from datetime import datetime as dt
+        from django.utils.dateparse import parse_date
+        
+        # Handle both date and datetime objects
+        if isinstance(value, str):
+            value = parse_date(value) if len(value) == 10 else timezone.datetime.fromisoformat(value)
+        
+        if hasattr(value, 'time'):  # It's a datetime
+            value_datetime = value
+        else:  # It's a date, convert to datetime at START of day (00:00:00)
+            value_datetime = timezone.make_aware(dt.combine(value, dt.min.time()))
+        
+        # Ensure value_datetime is timezone-aware
+        if value_datetime.tzinfo is None:
+            value_datetime = timezone.make_aware(value_datetime)
+        
+        # Get current time
+        current_datetime = timezone.now()
+        
+        # Allow any date before NOW plus 1 minute tolerance
+        if value_datetime > current_datetime + timedelta(minutes=1):
+            raise serializers.ValidationError(f"{field_name} cannot be in the future.")
         return value
 
 
@@ -196,102 +220,37 @@ class OrderUpdateSerializer(OrderBaseSerializer):
         }
 
     def validate_shipped_date(self, value):
-        """Validate shipped date"""
-        return self.validate_future_date(value, "Shipped date")
+        """Validate shipped date based on resulting status."""
+        if not value:
+            return value
+
+        # If order is marked as shipped or beyond, shipped_date is an actual event and
+        # must not be in the future. For earlier states it can represent a planned date.
+        current_status = self.instance.status if self.instance else None
+        new_status = self.initial_data.get('status', current_status)
+        if new_status in ['shipped', 'delivered', 'returned', 'cancelled']:
+            return self.validate_future_date(value, "Shipped date")
+        return value
 
     def validate_delivered_date(self, value):
-        """Validate delivered date"""
-        return self.validate_future_date(value, "Delivered date")
+        """Validate delivered date based on resulting status."""
+        if not value:
+            return value
+
+        # Allow future delivered_date as planned ETA while order is not yet delivered.
+        # Once status becomes delivered/returned, it must be an actual past/current date.
+        current_status = self.instance.status if self.instance else None
+        new_status = self.initial_data.get('status', current_status)
+        if new_status in ['delivered', 'returned']:
+            return self.validate_future_date(value, "Delivered date")
+        return value
 
     def validate(self, attrs):
-        """Comprehensive cross-field validation"""
+        """Flexible validation without strict rules"""
         attrs = super().validate(attrs)
-        
-        # Get current and new values
-        current_status = self.instance.status
-        new_status = attrs.get('status', current_status)
-        
-        # Validate status transitions
-        self._validate_status_transition(current_status, new_status)
-        
-        # Validate date relationships
-        self._validate_date_relationships(attrs)
-        
-        # Status-specific validations
-        self._validate_status_specific_requirements(attrs)
-        
+        # All restrictions removed - users can transition between any statuses
+        # and use any date combination they want
         return attrs
-
-    def _validate_status_transition(self, current_status, new_status):
-        """Validate allowed status transitions"""
-        valid_transitions = {
-            'pending': ['processing', 'cancelled'],
-            'processing': ['shipped', 'cancelled'],
-            'shipped': ['delivered', 'cancelled'],
-            'delivered': ['returned'],  
-            'cancelled': [],  # Terminal state
-            'returned': []    # Terminal state
-        }
-        
-        allowed = valid_transitions.get(current_status, [])
-        if new_status != current_status and new_status not in allowed:
-            raise serializers.ValidationError({
-                'status': f'Cannot transition from {current_status} to {new_status}. '
-                         f'Allowed transitions: {", ".join(allowed) if allowed else "None"}'
-            })
-
-    def _validate_date_relationships(self, attrs):
-        """Validate date field relationships"""
-        # Get current values from instance or new values
-        order_date = self.instance.order_date
-        shipped_date = attrs.get('shipped_date', self.instance.shipped_date)
-        delivered_date = attrs.get('delivered_date', self.instance.delivered_date)
-        
-        # Validate shipped_date vs order_date
-        if shipped_date and order_date and shipped_date < order_date:
-            raise serializers.ValidationError({
-                'shipped_date': 'Shipped date cannot be before order date'
-            })
-        
-        # Validate delivered_date vs shipped_date
-        if delivered_date and shipped_date and delivered_date < shipped_date:
-            raise serializers.ValidationError({
-                'delivered_date': 'Delivered date cannot be before shipped date'
-            })
-        
-        # Validate delivered_date vs order_date
-        if delivered_date and order_date and delivered_date < order_date:
-            raise serializers.ValidationError({
-                'delivered_date': 'Delivered date cannot be before order date'
-            })
-
-    def _validate_status_specific_requirements(self, attrs):
-        """Validate status-specific field requirements"""
-        new_status = attrs.get('status', self.instance.status)
-        
-        # Shipped status requires shipped_date
-        if new_status == 'shipped':
-            shipped_date = attrs.get('shipped_date', self.instance.shipped_date)
-            if not shipped_date:
-                raise serializers.ValidationError({
-                    'shipped_date': 'Shipped date is required when status is shipped'
-                })
-        
-        # Delivered status requires delivered_date
-        if new_status == 'delivered':
-            delivered_date = attrs.get('delivered_date', self.instance.delivered_date)
-            if not delivered_date:
-                raise serializers.ValidationError({
-                    'delivered_date': 'Delivered date is required when status is delivered'
-                })
-        
-        # Returned status requires return_reason
-        if new_status == 'returned':
-            return_reason = attrs.get('return_reason', self.instance.return_reason)
-            if not return_reason or not return_reason.strip():
-                raise serializers.ValidationError({
-                    'return_reason': 'Return reason is required when status is returned'
-                })
 
 
 class OrderDetailSerializer(OrderBaseSerializer):
@@ -299,7 +258,8 @@ class OrderDetailSerializer(OrderBaseSerializer):
     seller_info = serializers.SerializerMethodField()
     
     class Meta(OrderBaseSerializer.Meta):
-        fields = OrderBaseSerializer.Meta.fields + ['seller_info']
+        fields = OrderBaseSerializer.Meta.fields + ['seller_info', 'is_returned']
+        read_only_fields = OrderBaseSerializer.Meta.read_only_fields + ['is_returned']
 
     def get_seller_info(self, obj):
         """Get seller information for the order"""

@@ -356,11 +356,48 @@ os.makedirs(EXPORT_ROOT, exist_ok=True)
 # AI Insights Configuration
 AI_INSIGHTS_ENABLED = True
 AI_MODEL_UPDATE_INTERVAL = 3600  # 1 hour
-AI_PREDICTION_CACHE_TIMEOUT = 1800  # 30 minutes
+AI_PREDICTION_CACHE_TIMEOUT = 7200  # 2 hours - increased for faster dashboard loads
 
 # Performance thresholds for AI alerts
 AI_PERFORMANCE_ALERT_THRESHOLD = 60  # Score below 60 triggers alert
-AI_TREND_ANALYSIS_DAYS = 30  # Days to analyze for trends
+AI_TREND_ANALYSIS_DAYS = 14  # Days to analyze for trends - optimized for speed
+
+# ==================== PERFORMANCE SCORING CONFIGURATION ====================
+# All performance scoring weights and thresholds are now configurable
+# These values drive the seller performance calculation algorithm
+
+# Score Component Weights (must sum to 100)
+PERFORMANCE_SCORE_WEIGHTS = {
+    'sales': 30,           # Sales Volume: 30%
+    'delivery': 25,        # Delivery Speed: 25%
+    'rating': 35,          # Average Rating: 35%
+    'returns': 10,         # Returns Penalty: 10%
+}
+
+# Sales Volume Score Thresholds
+PERFORMANCE_SALES_EXCELLENT = 100000.00    # $100,000 = 100 points
+PERFORMANCE_SALES_GOOD = 50000.00          # $50,000+ = 70-100 points
+PERFORMANCE_SALES_LOW = 10000.00            # $10,000+ = 40-70 points
+                                            # Below $10,000 = 0-40 points (linear)
+
+# Delivery Speed Score Thresholds (in days)
+PERFORMANCE_DELIVERY_EXCELLENT = 2.00      # ≤2 days = 100 points
+PERFORMANCE_DELIVERY_GOOD = 5.00           # 2-5 days = 70-100 points
+PERFORMANCE_DELIVERY_MID = 10.00           # 5-10 days = 40-70 points
+PERFORMANCE_DELIVERY_SLOW = 14.00          # 10-14 days = 20-40 points
+                                           # >14 days = 0-20 points (linear penalty)
+
+# Return Rate Score Thresholds (percentage)
+PERFORMANCE_RETURN_RATE_EXCELLENT = 2.00   # ≤2% = 100 points
+PERFORMANCE_RETURN_RATE_GOOD = 5.00        # 2-5% = 80-100 points
+PERFORMANCE_RETURN_RATE_MID = 10.00        # 5-10% = 50-80 points
+PERFORMANCE_RETURN_RATE_MAX = 20.00        # 10-20% = 20-50 points
+                                           # >20% = 0-20 points (linear penalty)
+
+# Performance Score Status Thresholds
+PERFORMANCE_STATUS_ACTIVE = 70             # Score ≥ 70 = Active
+PERFORMANCE_STATUS_UNDER_REVIEW = 50       # 50-70 = Under Review
+PERFORMANCE_STATUS_SUSPENDED = 50          # Score < 50 = Suspended
 
 # ==================== IMPORT/EXPORT SETTINGS ====================
 IMPORT_EXPORT_USE_TRANSACTIONS = True

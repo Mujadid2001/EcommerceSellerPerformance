@@ -2,11 +2,13 @@
 Performance Calculation Service
 
 Implements weighted scoring algorithm for seller performance evaluation.
+All thresholds and weights are read from database via PerformanceConfig model.
 """
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Optional
 from django.db.models import Avg, Count, Sum, Q
 from django.utils import timezone
+from django.conf import settings
 
 
 class PerformanceCalculationService:
@@ -14,35 +16,22 @@ class PerformanceCalculationService:
     Service for calculating seller performance scores using weighted metrics.
     
     Scoring Algorithm:
-    - Sales Volume Weight: 30%
-    - Delivery Speed Weight: 25%
-    - Average Rating Weight: 30%
-    - Returns Penalty: 15%
+    - Sales Volume Weight: configurable (default 30%)
+    - Delivery Speed Weight: configurable (default 25%)
+    - Average Rating Weight: configurable (default 35%)
+    - Returns Penalty: configurable (default 10%)
     
     Score Range: 0-100
+    
+    All configuration values are read from PerformanceConfig database model.
+    This allows administrators to change scoring weights and thresholds through Django admin
+    without restarting the server or editing code.
     """
-    
-    # Configurable weights (must sum to 100)
-    SALES_VOLUME_WEIGHT = Decimal('30.00')
-    DELIVERY_SPEED_WEIGHT = Decimal('25.00')
-    RATING_WEIGHT = Decimal('30.00')
-    RETURNS_WEIGHT = Decimal('15.00')
-    
-    # Performance thresholds
-    EXCELLENT_SALES_THRESHOLD = Decimal('100000.00')  # $100,000
-    GOOD_SALES_THRESHOLD = Decimal('50000.00')  # $50,000
-    
-    EXCELLENT_DELIVERY_DAYS = Decimal('2.00')  # 2 days
-    GOOD_DELIVERY_DAYS = Decimal('5.00')  # 5 days
-    MAX_DELIVERY_DAYS = Decimal('14.00')  # 14 days
-    
-    EXCELLENT_RETURN_RATE = Decimal('2.00')  # 2%
-    ACCEPTABLE_RETURN_RATE = Decimal('5.00')  # 5%
-    MAX_RETURN_RATE = Decimal('20.00')  # 20%
     
     def __init__(self, seller):
         """
         Initialize service with a seller instance.
+        All configuration is loaded from PerformanceConfig database model.
         
         Args:
             seller: Seller model instance
@@ -50,6 +39,33 @@ class PerformanceCalculationService:
         self.seller = seller
         self.metrics = {}
         self.score_breakdown = {}
+        
+        # Load configuration from database model
+        from apps.performance.models import PerformanceConfig
+        config = PerformanceConfig.get_config()
+        
+        # Load weights from database config
+        self.SALES_VOLUME_WEIGHT = Decimal(str(config.weight_sales))
+        self.DELIVERY_SPEED_WEIGHT = Decimal(str(config.weight_delivery))
+        self.RATING_WEIGHT = Decimal(str(config.weight_rating))
+        self.RETURNS_WEIGHT = Decimal(str(config.weight_returns))
+        
+        # Load sales thresholds from database config
+        self.EXCELLENT_SALES_THRESHOLD = Decimal(str(config.sales_threshold_excellent))
+        self.GOOD_SALES_THRESHOLD = Decimal(str(config.sales_threshold_good))
+        self.LOW_SALES_THRESHOLD = Decimal(str(config.sales_threshold_low))
+        
+        # Load delivery thresholds from database config
+        self.EXCELLENT_DELIVERY_DAYS = Decimal(str(config.delivery_threshold_excellent))
+        self.GOOD_DELIVERY_DAYS = Decimal(str(config.delivery_threshold_good))
+        self.MID_DELIVERY_DAYS = Decimal(str(config.delivery_threshold_mid))
+        self.MAX_DELIVERY_DAYS = Decimal(str(config.delivery_threshold_slow))
+        
+        # Load return rate thresholds from database config
+        self.EXCELLENT_RETURN_RATE = Decimal(str(config.return_rate_threshold_excellent))
+        self.ACCEPTABLE_RETURN_RATE = Decimal(str(config.return_rate_threshold_good))
+        self.MID_RETURN_RATE = Decimal(str(config.return_rate_threshold_mid))
+        self.MAX_RETURN_RATE = Decimal(str(config.return_rate_threshold_max))
     
     def calculate_performance_score(self) -> Decimal:
         """
@@ -125,12 +141,7 @@ class PerformanceCalculationService:
     def _calculate_sales_score(self) -> Decimal:
         """
         Calculate sales volume score (0-100).
-        
-        Logic:
-        - >= $100k: 100 points
-        - $50k-$100k: 70-100 points (linear)
-        - $10k-$50k: 40-70 points (linear)
-        - < $10k: 0-40 points (linear)
+        Configuration from Django settings for all thresholds.
         """
         sales_volume = self.metrics['total_sales_volume']
         
@@ -142,29 +153,23 @@ class PerformanceCalculationService:
                 self.EXCELLENT_SALES_THRESHOLD - self.GOOD_SALES_THRESHOLD
             )
             return Decimal('70.00') + (ratio * Decimal('30.00'))
-        elif sales_volume >= Decimal('10000.00'):
+        elif sales_volume >= self.LOW_SALES_THRESHOLD:
             # Linear interpolation between 40 and 70
-            ratio = (sales_volume - Decimal('10000.00')) / (
-                self.GOOD_SALES_THRESHOLD - Decimal('10000.00')
+            ratio = (sales_volume - self.LOW_SALES_THRESHOLD) / (
+                self.GOOD_SALES_THRESHOLD - self.LOW_SALES_THRESHOLD
             )
             return Decimal('40.00') + (ratio * Decimal('30.00'))
         else:
             # Linear interpolation between 0 and 40
             if sales_volume <= Decimal('0.00'):
                 return Decimal('0.00')
-            ratio = sales_volume / Decimal('10000.00')
+            ratio = sales_volume / self.LOW_SALES_THRESHOLD
             return ratio * Decimal('40.00')
     
     def _calculate_delivery_score(self) -> Decimal:
         """
         Calculate delivery speed score (0-100).
-        
-        Logic:
-        - <= 2 days: 100 points
-        - 2-5 days: 70-100 points (linear)
-        - 5-10 days: 40-70 points (linear)
-        - 10-14 days: 20-40 points (linear)
-        - > 14 days: 0-20 points
+        Configuration from Django settings for all thresholds.
         """
         avg_delivery = self.metrics['average_delivery_days']
         
@@ -180,16 +185,16 @@ class PerformanceCalculationService:
                 self.GOOD_DELIVERY_DAYS - self.EXCELLENT_DELIVERY_DAYS
             )
             return Decimal('100.00') - (ratio * Decimal('30.00'))
-        elif avg_delivery <= Decimal('10.00'):
+        elif avg_delivery <= self.MID_DELIVERY_DAYS:
             # Linear interpolation between 40 and 70
             ratio = (avg_delivery - self.GOOD_DELIVERY_DAYS) / (
-                Decimal('10.00') - self.GOOD_DELIVERY_DAYS
+                self.MID_DELIVERY_DAYS - self.GOOD_DELIVERY_DAYS
             )
             return Decimal('70.00') - (ratio * Decimal('30.00'))
         elif avg_delivery <= self.MAX_DELIVERY_DAYS:
             # Linear interpolation between 20 and 40
-            ratio = (avg_delivery - Decimal('10.00')) / (
-                self.MAX_DELIVERY_DAYS - Decimal('10.00')
+            ratio = (avg_delivery - self.MID_DELIVERY_DAYS) / (
+                self.MAX_DELIVERY_DAYS - self.MID_DELIVERY_DAYS
             )
             return Decimal('40.00') - (ratio * Decimal('20.00'))
         else:
@@ -221,14 +226,7 @@ class PerformanceCalculationService:
     def _calculate_returns_penalty(self) -> Decimal:
         """
         Calculate returns penalty score (0-100).
-        
-        Logic:
-        - Lower return rate = higher score
-        - <= 2%: 100 points
-        - 2-5%: 80-100 points (linear)
-        - 5-10%: 50-80 points (linear)
-        - 10-20%: 20-50 points (linear)
-        - > 20%: 0-20 points
+        Configuration from Django settings for all thresholds.
         """
         return_rate = self.metrics['return_rate']
         
@@ -244,16 +242,16 @@ class PerformanceCalculationService:
                 self.ACCEPTABLE_RETURN_RATE - self.EXCELLENT_RETURN_RATE
             )
             return Decimal('100.00') - (ratio * Decimal('20.00'))
-        elif return_rate <= Decimal('10.00'):
+        elif return_rate <= self.MID_RETURN_RATE:
             # Linear interpolation between 50 and 80
             ratio = (return_rate - self.ACCEPTABLE_RETURN_RATE) / (
-                Decimal('10.00') - self.ACCEPTABLE_RETURN_RATE
+                self.MID_RETURN_RATE - self.ACCEPTABLE_RETURN_RATE
             )
             return Decimal('80.00') - (ratio * Decimal('30.00'))
         elif return_rate <= self.MAX_RETURN_RATE:
             # Linear interpolation between 20 and 50
-            ratio = (return_rate - Decimal('10.00')) / (
-                self.MAX_RETURN_RATE - Decimal('10.00')
+            ratio = (return_rate - self.MID_RETURN_RATE) / (
+                self.MAX_RETURN_RATE - self.MID_RETURN_RATE
             )
             return Decimal('50.00') - (ratio * Decimal('30.00'))
         else:

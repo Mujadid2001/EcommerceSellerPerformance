@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 # from django_filters.rest_framework import DjangoFilterBackend  # TODO: Install django-filter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -58,7 +59,11 @@ class OptimizedBaseViewSet(viewsets.ModelViewSet):
         # Log error for monitoring
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in {self.__class__.__name__}: {exc}", exc_info=True)
+        if isinstance(exc, ValidationError):
+            # Validation issues are expected client errors; avoid noisy stack traces.
+            logger.warning(f"Validation error in {self.__class__.__name__}: {exc}")
+        else:
+            logger.error(f"Error in {self.__class__.__name__}: {exc}", exc_info=True)
         
         return super().handle_exception(exc)
 

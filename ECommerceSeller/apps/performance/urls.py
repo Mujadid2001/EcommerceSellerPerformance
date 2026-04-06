@@ -18,6 +18,10 @@ urlpatterns = [
     path('insights/<int:insight_id>/acknowledge/', enhanced_views.acknowledge_insight, name='acknowledge_insight'),
     path('alerts/<int:alert_id>/acknowledge/', enhanced_views.acknowledge_alert, name='acknowledge_alert'),
     
+    # Performance Predictor - Interactive What-If Tool
+    path('predictor/', enhanced_views.performance_predictor, name='predictor'),
+    path('api/predict/', enhanced_views.predict_performance_api, name='predict_api'),
+    
     # Original views
     path('seller/<int:seller_id>/', views.seller_public_profile, name='seller_profile'),
     path('orders/', views.orders_view, name='orders'),
@@ -33,8 +37,8 @@ urlpatterns = [
     
     # API endpoints - Orders
     path('api/orders/', views.OrderViewSet.as_view({'get': 'list', 'post': 'create'}), name='order-list'),
-    path('api/orders/<int:pk>/', views.OrderViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='order-detail'),
     path('api/orders/my_orders/', views.OrderViewSet.as_view({'get': 'my_orders'}), name='order-my-orders'),
+    path('api/orders/<int:pk>/', views.OrderViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='order-detail'),
     
     # API endpoints - Feedback
     path('api/feedback/', views.CustomerFeedbackViewSet.as_view({'get': 'list', 'post': 'create'}), name='feedback-list'),

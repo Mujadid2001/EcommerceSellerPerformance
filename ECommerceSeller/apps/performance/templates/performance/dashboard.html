@@ -16,6 +16,14 @@
             </h1>
             <p class="lead" style="color: #FFFFFF;">{{ seller.business_name }}</p>
         </div>
+        <div class="col-md-auto d-flex gap-2 align-items-center">
+            <a href="{% url 'performance:predictor' %}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: bold;">
+                <i class="bi bi-lightning-charge"></i> Performance Predictor
+            </a>
+            <a href="{% url 'performance:ai_insights' %}" class="btn btn-info" style="background: linear-gradient(135deg, #00CED1 0%, #00FFFF 100%); border: none; font-weight: bold; color: #000;">
+                <i class="bi bi-robot"></i> AI Insights
+            </a>
+        </div>
     </div>
 
     <!-- Performance Overview Cards -->
@@ -200,6 +208,48 @@
             </div>
         </div>
     </div>
+
+    <!-- AI Insights Section -->
+    {% if ai_insights %}
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card shadow border-0" style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border: 3px solid #FF00FF !important;">
+                <div class="card-header" style="background: linear-gradient(135deg, #FF00FF 0%, #FF1493 100%);">
+                    <h5 class="mb-0" style="color: #FFFFFF;">
+                        <i class="bi bi-robot"></i> 🤖 AI Insights & Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for insight in ai_insights %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="p-3" style="background: rgba(255, 0, 255, 0.1); border-radius: 10px; border-left: 4px solid {% if insight.severity == 'critical' %}#FF4444{% elif insight.severity == 'high' %}#FF6B6B{% elif insight.severity == 'medium' %}#FFA500{% else %}#00FF00{% endif %};">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 style="color: #FF00FF; font-weight: bold;">{{ insight.title }}</h6>
+                                    <span class="badge" style="background: {% if insight.severity == 'critical' %}#FF4444{% elif insight.severity == 'high' %}#FF6B6B{% elif insight.severity == 'medium' %}#FFA500{% else %}#00FF00{% endif %}; color: #000; font-size: 0.7rem;">
+                                        {{ insight.get_severity_display }}
+                                    </span>
+                                </div>
+                                <p style="color: #FFFFFF; font-size: 0.9rem; margin-bottom: 1rem;">{{ insight.description }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small style="color: #888;">Confidence: {{ insight.confidence_score|floatformat:0 }}%</small>
+                                    <small style="color: #888;">{{ insight.insight_type|upper }}</small>
+                                </div>
+                                {% if insight.recommendation %}<p style="color: #00FF00; font-size: 0.85rem; margin-top: 0.5rem;"><strong>Action:</strong> {{ insight.recommendation|truncatewords:10 }}</p>{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'performance:ai_insights' %}" class="btn btn-sm" style="background: linear-gradient(135deg, #FF00FF 0%, #FF1493 100%); color: #FFF; font-weight: bold;">
+                            View All AI Insights <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Recent Activity -->
     <div class="row g-4">

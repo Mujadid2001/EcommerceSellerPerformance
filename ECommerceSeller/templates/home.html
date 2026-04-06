@@ -144,6 +144,84 @@
     </div>
 </div>
 
+<!-- 🤖 AI Features Section - HIGHLIGHT -->
+<div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 100%); padding: 4rem 0; border-top: 3px solid #00FFFF; border-bottom: 3px solid #00FF00; margin: 2rem 0;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-3 fw-bold" style="color: #00FFFF;">
+                <i class="bi bi-robot"></i> AI-Powered Insights
+            </h2>
+            <p class="lead" style="color: #00FF00; font-weight: bold;">Intelligent analysis to help you grow your business</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="ai-feature-card p-4" style="background: rgba(0, 255, 255, 0.05); border: 2px solid #00FFFF; border-radius: 15px; transition: all 0.3s;">
+                    <div style="font-size: 2.5rem; color: #00FFFF; margin-bottom: 15px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <h4 style="color: #00FFFF; margin-bottom: 10px;">Predictive Alerts</h4>
+                    <p style="color: #FFFFFF; margin-bottom: 10px;">
+                        Get alerted before your performance drops. The AI predicts when your score might decline so you can take action early.
+                    </p>
+                    <small style="color: #00CED1;"><strong>✓ Early warning system</strong></small>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="ai-feature-card p-4" style="background: rgba(0, 255, 0, 0.05); border: 2px solid #00FF00; border-radius: 15px; transition: all 0.3s;">
+                    <div style="font-size: 2.5rem; color: #00FF00; margin-bottom: 15px;">
+                        <i class="bi bi-lightbulb-fill"></i>
+                    </div>
+                    <h4 style="color: #00FF00; margin-bottom: 10px;">Smart Recommendations</h4>
+                    <p style="color: #FFFFFF; margin-bottom: 10px;">
+                        Receive actionable suggestions tailored to your specific weaknesses. Focus on improvements that matter most.
+                    </p>
+                    <small style="color: #00FF00;"><strong>✓ Actionable insights</strong></small>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="ai-feature-card p-4" style="background: rgba(255, 215, 0, 0.05); border: 2px solid #FFD700; border-radius: 15px; transition: all 0.3s;">
+                    <div style="font-size: 2.5rem; color: #FFD700; margin-bottom: 15px;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h4 style="color: #FFD700; margin-bottom: 10px;">Trend Analysis</h4>
+                    <p style="color: #FFFFFF; margin-bottom: 10px;">
+                        Understand patterns in your data. Identify if sales are growing, delivery times improving, or ratings trending up/down.
+                    </p>
+                    <small style="color: #FFD700;"><strong>✓ Data-driven insights</strong></small>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="ai-feature-card p-4" style="background: rgba(0, 206, 209, 0.05); border: 2px solid #00CED1; border-radius: 15px; transition: all 0.3s;">
+                    <div style="font-size: 2.5rem; color: #00CED1; margin-bottom: 15px;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <h4 style="color: #00CED1; margin-bottom: 10px;">Health Score</h4>
+                    <p style="color: #FFFFFF; margin-bottom: 10px;">
+                        AI calculates your overall business health and shows which factors are helping or hurting your performance.
+                    </p>
+                    <small style="color: #00CED1;"><strong>✓ Holistic assessment</strong></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            {% if user.is_authenticated %}
+                <a href="{% url 'performance:dashboard' %}" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #00FFFF 0%, #00FF00 100%); color: #000; font-weight: bold; border: none;">
+                    <i class="bi bi-robot"></i> View Your AI Insights
+                </a>
+            {% else %}
+                <a href="{% url 'auth-register' %}" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #00FFFF 0%, #00FF00 100%); color: #000; font-weight: bold; border: none;">
+                    <i class="bi bi-rocket-takeoff"></i> Start For Free
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 <!-- Top Performers Section -->
 <div class="container py-5">
     <div class="text-center mb-5">

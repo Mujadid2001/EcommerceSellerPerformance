@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 def recalculate_seller_performance(self, seller_id):
     """
     Recalculate performance score for a specific seller.
+    Also triggers AI insights generation after performance is updated.
     """
     try:
         seller = Seller.objects.get(id=seller_id)
@@ -37,6 +38,9 @@ def recalculate_seller_performance(self, seller_id):
         status_service.assign_status(seller)
         
         seller.save()
+        
+        # Trigger AI insights generation after performance recalculation
+        generate_ai_insights_for_seller.delay(seller_id)
         
         logger.info(f"Performance recalculated for seller {seller_id}. New score: {new_score}")
         return {
@@ -107,6 +111,75 @@ def generate_daily_reports(time='00:00', sellers=None):
         }
     except Exception as e:
         logger.error(f"Error generating daily reports: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
+
+
+@shared_task
+def generate_ai_insights_for_seller(seller_id, priority='normal'):
+    """
+    Generate and save AI insights for a specific seller (optimized for speed).
+    Called after performance recalculation or on dashboard view.
+    
+    Args:
+        seller_id: Seller ID to analyze
+        priority: 'high' for urgent (dashboard), 'normal' for scheduled, 'background' for async
+    """
+    try:
+        from apps.ai_insights.services.ai_service import AIInsightService
+        from apps.ai_insights.models import PerformanceInsight
+        
+        logger.info(f"Starting AI insights generation for seller {seller_id} (priority: {priority})")
+        
+        seller = Seller.objects.get(id=seller_id)
+        ai_service = AIInsightService()
+        
+        # Analyze seller performance and save insights (with caching)
+        logger.debug(f"Analyzing performance for seller {seller_id}...")
+        analysis_result = ai_service.analyze_seller_performance(seller)
+        
+        # Verify insights were created
+        insight_count = PerformanceInsight.objects.filter(
+            seller=seller,
+            status=PerformanceInsight.Status.ACTIVE
+        ).count()
+        
+        logger.info(f"AI insights generated for seller {seller_id}. Total active insights: {insight_count}")
+        return {
+            'seller_id': seller_id,
+            'status': 'completed',
+            'insights_generated': True,
+            'insight_count': insight_count,
+            'priority': priority
+        }
+    except Seller.DoesNotExist:
+        logger.error(f"Seller with id {seller_id} not found.")
+        return {'status': 'failed', 'error': 'Seller not found'}
+    except Exception as exc:
+        logger.error(f"Error generating AI insights for seller {seller_id}: {str(exc)}", exc_info=True)
+        return {'status': 'error', 'message': str(exc)}
+
+
+@shared_task
+def generate_ai_insights_for_all_sellers():
+    """
+    Generate AI insights for all sellers.
+    Runs daily via Celery Beat.
+    """
+    try:
+        sellers = Seller.objects.all()
+        count = 0
+        
+        for seller in sellers:
+            generate_ai_insights_for_seller.delay(seller.id)
+            count += 1
+        
+        logger.info(f"AI insights generation triggered for {count} sellers.")
+        return {
+            'sellers_count': count,
+            'status': 'batch_started'
+        }
+    except Exception as e:
+        logger.error(f"Error in batch AI insights generation: {str(e)}")
         return {'status': 'error', 'message': str(e)}
 
 

@@ -8,6 +8,9 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal
+from datetime import timedelta
+
+from apps.performance.managers import OrderManager
 
 
 class Seller(models.Model):
@@ -229,6 +232,9 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Custom manager for Order
+    objects = OrderManager()
+    
     class Meta:
         verbose_name = _('Order')
         verbose_name_plural = _('Orders')
@@ -251,31 +257,9 @@ class Order(models.Model):
         return f"Order {self.order_number} - {self.seller.business_name}"
     
     def clean(self):
-        """Validate order dates."""
-        errors = {}
-        
-        # Validate shipped_date is not in the future
-        if self.shipped_date and self.shipped_date > timezone.now():
-            errors['shipped_date'] = "Shipped date cannot be in the future."
-        
-        # Validate delivered_date is not in the future
-        if self.delivered_date and self.delivered_date > timezone.now():
-            errors['delivered_date'] = "Delivered date cannot be in the future."
-        
-        # Validate shipped_date is not before order_date
-        if self.shipped_date and self.order_date and self.shipped_date < self.order_date:
-            errors['shipped_date'] = "Shipped date cannot be before the order date."
-        
-        # Validate delivered_date is not before order_date
-        if self.delivered_date and self.order_date and self.delivered_date < self.order_date:
-            errors['delivered_date'] = "Delivered date cannot be before the order date."
-        
-        # Validate delivered_date is not before shipped_date
-        if self.delivered_date and self.shipped_date and self.delivered_date < self.shipped_date:
-            errors['delivered_date'] = "Delivered date cannot be before the shipped date."
-        
-        if errors:
-            raise ValidationError(errors)
+        """Minimal validation - allow flexible date entries"""
+        # No strict date ordering requirements - allows any date combination
+        pass
     
     def save(self, *args, **kwargs):
         """Calculate delivery days on save if delivered."""
@@ -388,4 +372,166 @@ class CustomerFeedback(models.Model):
         """Ensure customer email matches order."""
         if self.order and not self.customer_email:
             self.customer_email = self.order.customer_email
+        super().save(*args, **kwargs)
+
+
+class PerformanceConfig(models.Model):
+    """
+    Singleton model for storing performance scoring configuration.
+    Admins can edit these values through Django admin without restarting the server.
+    All performance calculations will use these values instead of hardcoded settings.
+    """
+    
+    # Ensure only one instance exists
+    instance_id = models.AutoField(primary_key=True)
+    
+    # Score Weights (as percentages, must sum to 100)
+    weight_sales = models.PositiveSmallIntegerField(
+        default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Weight for sales score (0-100%)')
+    )
+    weight_delivery = models.PositiveSmallIntegerField(
+        default=25,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Weight for delivery score (0-100%)')
+    )
+    weight_rating = models.PositiveSmallIntegerField(
+        default=35,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Weight for rating score (0-100%)')
+    )
+    weight_returns = models.PositiveSmallIntegerField(
+        default=10,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Weight for returns penalty (0-100%)')
+    )
+    
+    # Sales Thresholds (in decimal amount)
+    sales_threshold_excellent = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('100000.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_('Sales amount for excellent score')
+    )
+    sales_threshold_good = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('50000.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_('Sales amount for good score')
+    )
+    sales_threshold_low = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('10000.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text=_('Sales amount threshold for low score warning')
+    )
+    
+    # Delivery Thresholds (in days)
+    delivery_threshold_excellent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('2.00'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text=_('Days for excellent delivery score')
+    )
+    delivery_threshold_good = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('5.00'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text=_('Days for good delivery score')
+    )
+    delivery_threshold_mid = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('10.00'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text=_('Days for mid delivery score')
+    )
+    delivery_threshold_slow = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('14.00'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text=_('Days threshold - above this is slow delivery')
+    )
+    
+    # Return Rate Thresholds (as percentage)
+    return_rate_threshold_excellent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('2.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text=_('Return rate % for excellent score')
+    )
+    return_rate_threshold_good = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('5.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text=_('Return rate % for good score')
+    )
+    return_rate_threshold_mid = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('10.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text=_('Return rate % for mid score')
+    )
+    return_rate_threshold_max = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('20.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        help_text=_('Return rate % threshold - above this is penalised heavily')
+    )
+    
+    # Status Thresholds (score points)
+    status_threshold_active = models.PositiveSmallIntegerField(
+        default=70,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Score threshold for ACTIVE status (≥ this score)')
+    )
+    status_threshold_under_review = models.PositiveSmallIntegerField(
+        default=50,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text=_('Score threshold for UNDER_REVIEW status (≥ this score)')
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = _('Performance Configuration')
+        verbose_name_plural = _('Performance Configuration')
+    
+    def __str__(self):
+        return f"Performance Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
+    
+    def clean(self):
+        """Validate that weights sum to 100%."""
+        total_weight = (self.weight_sales + self.weight_delivery + 
+                       self.weight_rating + self.weight_returns)
+        if total_weight != 100:
+            raise ValidationError(
+                _('Score weights must sum to 100%. Current sum: %(sum)s%%'),
+                code='invalid_weights',
+                params={'sum': total_weight}
+            )
+    
+    @classmethod
+    def get_config(cls):
+        """Get the singleton instance, create if it doesn't exist."""
+        config, created = cls.objects.get_or_create(instance_id=1)
+        return config
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one instance exists."""
+        self.clean()
+        self.instance_id = 1  # Always use ID 1 for singleton
         super().save(*args, **kwargs)

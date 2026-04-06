@@ -33,9 +33,9 @@ class AIInsightService:
     """
     
     def __init__(self):
-        self.cache_timeout = getattr(settings, 'AI_PREDICTION_CACHE_TIMEOUT', 1800)
+        self.cache_timeout = getattr(settings, 'AI_PREDICTION_CACHE_TIMEOUT', 7200)  # 2 hours
         self.alert_threshold = getattr(settings, 'AI_PERFORMANCE_ALERT_THRESHOLD', 60)
-        self.trend_days = getattr(settings, 'AI_TREND_ANALYSIS_DAYS', 30)
+        self.trend_days = getattr(settings, 'AI_TREND_ANALYSIS_DAYS', 14)  # Reduced from 30 to 14 for faster analysis
     
     def analyze_seller_performance(self, seller: Seller) -> Dict:
         """
@@ -87,14 +87,17 @@ class AIInsightService:
             return {'error': str(e)}
     
     def _gather_historical_data(self, seller: Seller) -> Dict:
-        """Gather historical performance data for analysis."""
+        """Gather historical performance data for analysis (optimized for speed)."""
         end_date = timezone.now()
-        start_date = end_date - timedelta(days=self.trend_days * 2)  # Get more data for better analysis
+        start_date = end_date - timedelta(days=self.trend_days)  # Optimized: analyze only recent data
         
-        # Order data
+        # Order data - only select needed fields for faster queries
         orders = Order.objects.filter(
             seller=seller,
-            order_date__gte=start_date
+            order_date__gte=start_date,
+            status__in=['delivered', 'returned', 'shipped']  # Only final states
+        ).only(
+            'order_date', 'order_amount', 'delivery_days', 'status', 'is_returned'
         ).values(
             'order_date', 'order_amount', 'delivery_days', 'status', 'is_returned'
         )
@@ -457,35 +460,118 @@ class AIInsightService:
     
     def _create_insights_from_analysis(self, seller: Seller, analysis: Dict):
         """Create PerformanceInsight records based on analysis results."""
+        from decimal import Decimal
+        
         try:
+            # Ensure analysis is valid
+            if not analysis or 'error' in analysis:
+                logger.warning(f"Invalid analysis for seller {seller.id}: {analysis}")
+                return
+            
+            # Create a primary insight summarizing overall health
+            health_score = analysis.get('overall_health_score', Decimal('0.00'))
+            risk_factors = analysis.get('risk_factors', [])
+            
+            # Primary health insight
+            if health_score >= 80:
+                insight_title = 'Excellent Performance'
+                severity = PerformanceInsight.Severity.INFO
+                desc = "Your metrics are strong across all categories."
+                recommendation = "Maintain your current performance level and look for optimization opportunities."
+            elif health_score >= 60:
+                insight_title = 'Good Performance'
+                severity = PerformanceInsight.Severity.INFO
+                desc = "Your performance is solid with room for improvement."
+                recommendation = "Focus on areas with lower scores to boost overall performance."
+            else:
+                insight_title = 'Performance Alert'
+                severity = PerformanceInsight.Severity.HIGH
+                desc = "Your performance metrics need immediate attention."
+                recommendation = "Review all metrics and take corrective action in weak areas."
+            
+            PerformanceInsight.objects.update_or_create(
+                seller=seller,
+                insight_type=PerformanceInsight.InsightType.PERFORMANCE_ALERT,
+                title=insight_title,
+                defaults={
+                    'severity': severity,
+                    'description': desc,
+                    'confidence_score': Decimal(min(health_score, 100)),
+                    'analysis_data': analysis,
+                    'status': PerformanceInsight.Status.ACTIVE,
+                    'recommendation': recommendation
+                }
+            )
+            logger.info(f"Created primary health insight for seller {seller.id}")
+            
             # Create trend analysis insight
-            if 'trend_analysis' in analysis:
-                trends = analysis['trend_analysis']
-                if trends.get('confidence', 0) > 70:
-                    PerformanceInsight.objects.create(
+            trend_analysis = analysis.get('trend_analysis', {})
+            if trend_analysis and 'error' not in trend_analysis:
+                rev_trend = trend_analysis.get('revenue_trend', {})
+                if rev_trend and rev_trend.get('slope', 0) > 0:
+                    PerformanceInsight.objects.update_or_create(
                         seller=seller,
                         insight_type=PerformanceInsight.InsightType.TREND_ANALYSIS,
-                        severity=PerformanceInsight.Severity.INFO,
-                        title="Performance Trend Analysis",
-                        description=self._generate_trend_description(trends),
-                        confidence_score=trends.get('confidence', 70),
-                        analysis_data=trends
+                        title='Revenue Growing',
+                        defaults={
+                            'severity': PerformanceInsight.Severity.INFO,
+                            'description': "Your revenue is trending upward! Keep up the good work.",
+                            'confidence_score': Decimal('85.00'),
+                            'analysis_data': rev_trend,
+                            'status': PerformanceInsight.Status.ACTIVE,
+                            'recommendation': 'Maintain current strategy and consider scaling operations.'
+                        }
                     )
+                elif rev_trend:
+                    PerformanceInsight.objects.update_or_create(
+                        seller=seller,
+                        insight_type=PerformanceInsight.InsightType.TREND_ANALYSIS,
+                        title='Revenue Declining',
+                        defaults={
+                            'severity': PerformanceInsight.Severity.HIGH,
+                            'description': "Your revenue is declining. Take action to reverse this trend.",
+                            'confidence_score': Decimal('80.00'),
+                            'analysis_data': rev_trend,
+                            'status': PerformanceInsight.Status.ACTIVE,
+                            'recommendation': 'Review marketing strategy and consider promotions or improvements.'
+                        }
+                    )
+                logger.info(f"Created trend insight for seller {seller.id}")
+            
+            # Create recommendations insights
+            recommendations = analysis.get('recommendations', [])
+            if recommendations:
+                rec_str = '\n'.join([str(r) for r in recommendations[:3]])
+                PerformanceInsight.objects.update_or_create(
+                    seller=seller,
+                    insight_type=PerformanceInsight.InsightType.RECOMMENDATION,
+                    title='Action Items',
+                    defaults={
+                        'severity': PerformanceInsight.Severity.MEDIUM,
+                        'description': "Here are recommended actions to improve your performance.",
+                        'confidence_score': Decimal('75.00'),
+                        'analysis_data': {'recommendations': recommendations},
+                        'status': PerformanceInsight.Status.ACTIVE,
+                        'recommendation': rec_str
+                    }
+                )
+                logger.info(f"Created recommendation insight for seller {seller.id}")
             
             # Create recommendation insights
             if 'recommendations' in analysis:
-                for rec in analysis['recommendations']:
-                    if rec['priority'] == 'high':
-                        PerformanceInsight.objects.create(
-                            seller=seller,
-                            insight_type=PerformanceInsight.InsightType.RECOMMENDATION,
-                            severity=PerformanceInsight.Severity.MEDIUM,
-                            title=rec['title'],
-                            description=rec['description'],
-                            recommendation='\n'.join(rec['actions']),
-                            confidence_score=85,
-                            analysis_data=rec
-                        )
+                for idx, rec in enumerate(analysis['recommendations'][:5]):
+                    severity = PerformanceInsight.Severity.HIGH if rec.get('priority') == 'high' else PerformanceInsight.Severity.MEDIUM
+                    PerformanceInsight.objects.create(
+                        seller=seller,
+                        insight_type=PerformanceInsight.InsightType.RECOMMENDATION,
+                        severity=severity,
+                        title=rec.get('title', 'Recommendation'),
+                        description=rec.get('description', ''),
+                        recommendation='\n'.join(rec.get('actions', [])),
+                        confidence_score=Decimal('85.00'),
+                        analysis_data=rec,
+                        status=PerformanceInsight.Status.ACTIVE
+                    )
             
         except Exception as e:
             logger.error(f"Failed to create insights for seller {seller.id}: {e}")

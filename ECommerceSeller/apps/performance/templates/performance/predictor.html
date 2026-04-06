@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Performance Predictor - What-If Scenario Tool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .predictor-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .header-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .header-section h1 {
+        margin: 0;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+    
+    .header-section p {
+        margin: 0;
+        font-size: 1.1em;
+        opacity: 0.9;
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .metric-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-card h3 {
+        margin-top: 0;
+        color: #667eea;
+        font-size: 1.2em;
+    }
+    
+    .metric-card .metric-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-weight: 500;
+    }
+    
+    .metric-card input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #ddd;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    
+    .metric-card input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    
+    .metric-card input[type="range"]::-webkit-slider-thumb:hover {
+        background: #764ba2;
+    }
+    
+    .metric-card input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+        border: none;
+        transition: background 0.3s;
+    }
+    
+    .metric-card input[type="range"]::-moz-range-thumb:hover {
+        background: #764ba2;
+    }
+    
+    .metric-value {
+        display: inline-block;
+        background: #f0f0f0;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        color: #667eea;
+    }
+    
+    .comparison-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .comparison-box {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    
+    .comparison-box h3 {
+        margin-top: 0;
+        color: #333;
+        text-align: center;
+    }
+    
+    .score-display {
+        text-align: center;
+        margin: 20px 0;
+    }
+    
+    .score-number {
+        font-size: 3em;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .score-current {
+        color: #666;
+    }
+    
+    .score-predicted {
+        color: #667eea;
+    }
+    
+    .score-status {
+        font-size: 1.1em;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 10px;
+    }
+    
+    .status-excellent {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-good {
+        background: #cce5ff;
+        color: #004085;
+    }
+    
+    .status-improvement {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .impact-badge {
+        display: inline-block;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-top: 10px;
+    }
+    
+    .impact-positive {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .impact-negative {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .impact-neutral {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .breakdown-item {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .breakdown-item .label {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .breakdown-item .value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #667eea;
+    }
+    
+    .breakdown-item .weight {
+        font-size: 0.85em;
+        color: #999;
+        margin-top: 5px;
+    }
+    
+    .suggestions-section {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .suggestions-section h2 {
+        color: #333;
+        margin-top: 0;
+    }
+    
+    .suggestion-card {
+        background: #f9f9f9;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+    
+    .suggestion-card .metric {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .suggestion-card .description {
+        color: #666;
+        margin-bottom: 10px;
+    }
+    
+    .suggestion-card .priority {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    
+    .priority-high {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .priority-medium {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .priority-low {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .breakdown-text {
+        background: #f0f0f0;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 15px;
+        color: #333;
+        line-height: 1.6;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .reset-button {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 10px;
+        transition: background 0.3s;
+    }
+    
+    .reset-button:hover {
+        background: #5a6268;
+    }
+    
+    .hero-text {
+        background: #ecf0f1;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        line-height: 1.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="predictor-container">
+    <!-- Header -->
+    <div class="header-section">
+        <h1>🎯 Performance Predictor</h1>
+        <p>Adjust your metrics and see how they impact your performance score in real-time</p>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="hero-text">
+        <strong>How it works:</strong> Use the sliders below to adjust your metrics (sales, delivery time, rating, returns). 
+        The system will instantly calculate your predicted performance score and show you the impact. 
+        This helps you understand which improvements have the biggest effect on your score.
+    </div>
+    
+    <!-- Current Metrics Section -->
+    <div class="metrics-grid">
+        <!-- Total Sales -->
+        <div class="metric-card">
+            <h3>💰 Total Sales Volume</h3>
+            <div class="metric-label">
+                <span>Current: ${{ current_metrics.total_sales|floatformat:0 }}</span>
+                <span class="metric-value" id="sales-display">${{ current_metrics.total_sales|floatformat:0 }}</span>
+            </div>
+            <input type="range" id="sales-slider" min="0" max="{{ max_sales|floatformat:0 }}" 
+                   value="{{ current_metrics.total_sales|floatformat:0 }}" step="1000">
+            <div style="font-size: 0.85em; color: #999; margin-top: 10px;">
+                Drag to adjust your projected sales
+            </div>
+            <button class="reset-button" onclick="resetMetric('sales', {{ current_metrics.total_sales|floatformat:0 }})">Reset to Current</button>
+        </div>
+        
+        <!-- Average Rating -->
+        <div class="metric-card">
+            <h3>⭐ Customer Rating</h3>
+            <div class="metric-label">
+                <span>Current: {{ current_metrics.average_rating|floatformat:2 }}/5</span>
+                <span class="metric-value" id="rating-display">{{ current_metrics.average_rating|floatformat:2 }}</span>
+            </div>
+            <input type="range" id="rating-slider" min="0" max="5" 
+                   value="{{ current_metrics.average_rating|floatformat:2 }}" step="0.1">
+            <div style="font-size: 0.85em; color: #999; margin-top: 10px;">
+                Drag to simulate rating improvements
+            </div>
+            <button class="reset-button" onclick="resetMetric('rating', {{ current_metrics.average_rating|floatformat:2 }})">Reset to Current</button>
+        </div>
+        
+        <!-- Delivery Days -->
+        <div class="metric-card">
+            <h3>📦 Average Delivery Days</h3>
+            <div class="metric-label">
+                <span>Current: {{ current_metrics.average_delivery_days|floatformat:2 }} days</span>
+                <span class="metric-value" id="delivery-display">{{ current_metrics.average_delivery_days|floatformat:2 }}</span>
+            </div>
+            <input type="range" id="delivery-slider" min="0" max="{{ max_delivery_days }}" 
+                   value="{{ current_metrics.average_delivery_days|floatformat:2 }}" step="0.5">
+            <div style="font-size: 0.85em; color: #999; margin-top: 10px;">
+                Lower is better - faster delivery = higher score
+            </div>
+            <button class="reset-button" onclick="resetMetric('delivery', {{ current_metrics.average_delivery_days|floatformat:2 }})">Reset to Current</button>
+        </div>
+        
+        <!-- Return Rate -->
+        <div class="metric-card">
+            <h3>🔄 Return Rate %</h3>
+            <div class="metric-label">
+                <span>Current: {{ current_metrics.return_rate|floatformat:2 }}%</span>
+                <span class="metric-value" id="returns-display">{{ current_metrics.return_rate|floatformat:2 }}%</span>
+            </div>
+            <input type="range" id="returns-slider" min="0" max="{{ max_return_rate }}" 
+                   value="{{ current_metrics.return_rate|floatformat:2 }}" step="0.5">
+            <div style="font-size: 0.85em; color: #999; margin-top: 10px;">
+                Lower is better - fewer returns = higher score
+            </div>
+            <button class="reset-button" onclick="resetMetric('returns', {{ current_metrics.return_rate|floatformat:2 }})">Reset to Current</button>
+        </div>
+    </div>
+    
+    <!-- Score Comparison -->
+    <div class="comparison-section">
+        <!-- Current Score -->
+        <div class="comparison-box">
+            <h3>📊 Current Score</h3>
+            <div class="score-display">
+                <div class="score-number score-current">{{ current_metrics.current_score|floatformat:1 }}</div>
+                <div style="color: #999; font-size: 0.9em;">out of 100</div>
+            </div>
+        </div>
+        
+        <!-- Predicted Score -->
+        <div class="comparison-box">
+            <h3>🎯 Predicted Score</h3>
+            <div class="score-display">
+                <div class="score-number score-predicted" id="predicted-score">{{ current_metrics.current_score|floatformat:1 }}</div>
+                <div style="color: #999; font-size: 0.9em;">out of 100</div>
+            </div>
+            <div id="impact-display" class="impact-badge impact-neutral">No change yet</div>
+        </div>
+    </div>
+    
+    <!-- Score Status and Impact -->
+    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 30px;">
+        <div id="score-status" class="score-status" style="display: none;"></div>
+        
+        <!-- Breakdown -->
+        <div style="margin-top: 20px;">
+            <h3>Score Breakdown</h3>
+            <div class="breakdown-grid" id="breakdown-grid">
+                <div class="breakdown-item">
+                    <div class="label">Sales Impact</div>
+                    <div class="value" id="breakdown-sales">0</div>
+                    <div class="weight">(30%)</div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="label">Delivery Impact</div>
+                    <div class="value" id="breakdown-delivery">0</div>
+                    <div class="weight">(25%)</div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="label">Rating Impact</div>
+                    <div class="value" id="breakdown-rating">0</div>
+                    <div class="weight">(35%)</div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="label">Returns Penalty</div>
+                    <div class="value" id="breakdown-returns">0</div>
+                    <div class="weight">(10%)</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Breakdown Text -->
+        <div id="breakdown-text" class="breakdown-text" style="display: none;"></div>
+    </div>
+    
+    <!-- Suggestions -->
+    <div class="suggestions-section" id="suggestions-section" style="display: none;">
+        <h2>💡 Recommended Actions (Highest Impact First)</h2>
+        <div id="suggestions-container"></div>
+    </div>
+    
+    <!-- Loading Indicator -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <p>Calculating predicted score...</p>
+    </div>
+</div>
+
+<script>
+    // Get all slider elements
+    const salesSlider = document.getElementById('sales-slider');
+    const ratingSlider = document.getElementById('rating-slider');
+    const deliverySlider = document.getElementById('delivery-slider');
+    const returnsSlider = document.getElementById('returns-slider');
+    
+    // Update displays when sliders change
+    salesSlider.addEventListener('input', updatePrediction);
+    ratingSlider.addEventListener('input', updatePrediction);
+    deliverySlider.addEventListener('input', updatePrediction);
+    returnsSlider.addEventListener('input', updatePrediction);
+    
+    function updateDisplay() {
+        document.getElementById('sales-display').textContent = '$' + parseInt(salesSlider.value).toLocaleString();
+        document.getElementById('rating-display').textContent = parseFloat(ratingSlider.value).toFixed(2);
+        document.getElementById('delivery-display').textContent = parseFloat(deliverySlider.value).toFixed(2);
+        document.getElementById('returns-display').textContent = parseFloat(returnsSlider.value).toFixed(2) + '%';
+    }
+    
+    function resetMetric(metric, value) {
+        if (metric === 'sales') {
+            salesSlider.value = value;
+        } else if (metric === 'rating') {
+            ratingSlider.value = value;
+        } else if (metric === 'delivery') {
+            deliverySlider.value = value;
+        } else if (metric === 'returns') {
+            returnsSlider.value = value;
+        }
+        updateDisplay();
+        updatePrediction();
+    }
+    
+    function updatePrediction() {
+        updateDisplay();
+        
+        document.getElementById('loading').style.display = 'block';
+        
+        const data = {
+            total_sales: parseFloat(salesSlider.value),
+            average_rating: parseFloat(ratingSlider.value),
+            average_delivery_days: parseFloat(deliverySlider.value),
+            return_rate: parseFloat(returnsSlider.value),
+        };
+        
+        fetch('{% url "performance:predict_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            
+            if (data.success) {
+                // Update predicted score
+                const predictedScore = data.predicted_score;
+                const currentScore = data.current_score;
+                const impact = data.impact;
+                
+                document.getElementById('predicted-score').textContent = predictedScore.toFixed(1);
+                
+                // Update impact badge
+                const impactDisplay = document.getElementById('impact-display');
+                if (impact > 0) {
+                    impactDisplay.className = 'impact-badge impact-positive';
+                    impactDisplay.textContent = '+' + impact.toFixed(2) + ' points';
+                } else if (impact < 0) {
+                    impactDisplay.className = 'impact-badge impact-negative';
+                    impactDisplay.textContent = impact.toFixed(2) + ' points';
+                } else {
+                    impactDisplay.className = 'impact-badge impact-neutral';
+                    impactDisplay.textContent = 'No change';
+                }
+                
+                // Update status
+                const statusDisplay = document.getElementById('score-status');
+                statusDisplay.style.display = 'block';
+                statusDisplay.className = 'score-status status-' + data.status.toLowerCase().replace(' ', '-');
+                statusDisplay.textContent = '📈 Predicted Status: ' + data.status;
+                
+                // Update breakdown
+                document.getElementById('breakdown-sales').textContent = data.breakdown.sales_score.toFixed(1);
+                document.getElementById('breakdown-delivery').textContent = data.breakdown.delivery_score.toFixed(1);
+                document.getElementById('breakdown-rating').textContent = data.breakdown.rating_score.toFixed(1);
+                document.getElementById('breakdown-returns').textContent = data.breakdown.returns_penalty.toFixed(1);
+                
+                // Update breakdown text
+                const breakdownText = document.getElementById('breakdown-text');
+                breakdownText.textContent = data.breakdown_text;
+                breakdownText.style.display = 'block';
+                
+                // Display suggestions
+                if (data.suggestions && data.suggestions.length > 0) {
+                    const suggestionsSection = document.getElementById('suggestions-section');
+                    const suggestionsContainer = document.getElementById('suggestions-container');
+                    suggestionsContainer.innerHTML = '';
+                    
+                    data.suggestions.forEach(suggestion => {
+                        const card = document.createElement('div');
+                        card.className = 'suggestion-card';
+                        card.innerHTML = `
+                            <div class="metric">${suggestion.metric}</div>
+                            <div class="description">${suggestion.suggestion}</div>
+                            <span class="priority priority-${suggestion.priority.toLowerCase()}">${suggestion.priority} PRIORITY</span>
+                        `;
+                        suggestionsContainer.appendChild(card);
+                    });
+                    
+                    suggestionsSection.style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            document.getElementById('loading').style.display = 'none';
+            console.error('Error:', error);
+            alert('Failed to calculate prediction. Please try again.');
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Initialize display on page load
+    updateDisplay();
+</script>
+{% endblock %}

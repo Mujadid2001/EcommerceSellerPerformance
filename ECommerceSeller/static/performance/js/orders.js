@@ -7,6 +7,7 @@ class OrderManager {
     constructor() {
         this.API_BASE_URL = '/marketplace/api/orders/';
         this.REQUEST_TIMEOUT = 5000;
+        this.currentOrder = null;
         this.filters = {
             status: '',
             is_returned: '',
@@ -143,7 +144,8 @@ class OrderManager {
             const data = await response.json();
             
             if (!response.ok) {
-                throw new Error(data.detail || `HTTP ${response.status}: ${response.statusText}`);
+                const parsedError = this.extractErrorMessage(data);
+                throw new Error(parsedError || `HTTP ${response.status}: ${response.statusText}`);
             }
             
             return data;
@@ -364,10 +366,14 @@ class OrderManager {
     async updateOrderStatus(orderId) {
         try {
             const order = await this.makeRequest(`${this.API_BASE_URL}${orderId}/`);
+            this.currentOrder = order;
             this.populateUpdateForm(order);
-            this.openModal('updateOrderModal');
+            setTimeout(() => {
+                this.openModal('updateOrderModal');
+            }, 100);
         } catch (error) {
-            this.showAlert('Failed to load order details', 'danger');
+            console.error('Error loading order:', error);
+            this.showAlert('Failed to load order details: ' + error.message, 'danger');
         }
     }
 
@@ -385,10 +391,11 @@ class OrderManager {
             });
             
             this.showAlert('Order deleted successfully!', 'success');
-            this.loadOrders(1);
+            // Ensure orders are refreshed
+            await this.loadOrders(1);
             
         } catch (error) {
-            this.showAlert('Failed to delete order', 'danger');
+            this.showAlert('Failed to delete order: ' + error.message, 'danger');
         }
     }
 
@@ -664,9 +671,14 @@ class OrderManager {
         const formData = new FormData(form);
         
         const updateData = {
-            status: formData.get('status'),
-            is_returned: formData.get('is_returned') === 'true'
+            status: formData.get('status')
         };
+
+        // Status-specific fields expected by backend serializer.
+        if (updateData.status === 'shipped') {
+            const existingShippedDate = this.currentOrder?.shipped_date;
+            updateData.shipped_date = existingShippedDate || new Date().toISOString();
+        }
 
         // Add delivery date if status is delivered
         if (updateData.status === 'delivered') {
@@ -675,12 +687,12 @@ class OrderManager {
                 this.showFormError('updateOrderForm', 'Delivery date is required when status is delivered');
                 return;
             }
-            updateData.delivery_date = deliveryDate;
+            updateData.delivered_date = deliveryDate;
         }
 
         try {
             await this.makeRequest(`${this.API_BASE_URL}${orderId}/`, {
-                method: 'PUT',
+                method: 'PATCH',
                 body: JSON.stringify(updateData)
             });
             
@@ -719,9 +731,12 @@ class OrderManager {
         try {
             const order = await this.makeRequest(`${this.API_BASE_URL}${orderId}/`);
             this.displayOrderDetails(order);
-            this.openModal('orderDetailModal');
+            setTimeout(() => {
+                this.openModal('orderDetailModal');
+            }, 100);
         } catch (error) {
-            this.showToast('Failed to load order details', 'error');
+            console.error('Error loading order details:', error);
+            this.showToast('Failed to load order details: ' + error.message, 'error');
         }
     }
 
@@ -777,7 +792,7 @@ class OrderManager {
                         </tr>
                         <tr>
                             <td><strong>Delivery Date:</strong></td>
-                            <td>${order.delivery_date ? this.formatDateTime(order.delivery_date) : 'Not set'}</td>
+                            <td>${order.delivered_date ? this.formatDateTime(order.delivered_date) : 'Not set'}</td>
                         </tr>
                         <tr>
                             <td><strong>Delivery Days:</strong></td>
@@ -793,9 +808,17 @@ class OrderManager {
      * Populate update form with order data
      */
     populateUpdateForm(order) {
-        document.getElementById('updateOrderId').value = order.id;
-        document.getElementById('updateOrderStatus').value = order.status;
-        document.getElementById('updateIsReturned').value = order.is_returned.toString();
+        if (!order || typeof order !== 'object') {
+            console.error('Invalid order object:', order);
+            throw new Error('Order data is invalid');
+        }
+        
+        document.getElementById('updateOrderId').value = order.id || '';
+        document.getElementById('updateOrderStatus').value = order.status || '';
+        
+        // Set is_returned safely, defaulting to false if undefined
+        const isReturned = order.is_returned !== undefined ? order.is_returned : false;
+        document.getElementById('updateIsReturned').value = isReturned.toString();
         
         // Handle delivery date visibility
         const deliveryContainer = document.getElementById('updateDeliveryDateContainer');
@@ -804,13 +827,36 @@ class OrderManager {
         if (order.status === 'delivered') {
             deliveryContainer.style.display = 'block';
             deliveryInput.required = true;
-            if (order.delivery_date) {
-                deliveryInput.value = this.formatDateTimeLocal(order.delivery_date);
+            if (order.delivered_date) {
+                deliveryInput.value = this.formatDateTimeLocal(order.delivered_date);
             }
         } else {
             deliveryContainer.style.display = 'none';
             deliveryInput.required = false;
         }
+    }
+
+    /**
+     * Extract readable API error message from DRF error responses.
+     */
+    extractErrorMessage(data) {
+        if (!data) return '';
+        if (typeof data === 'string') return data;
+        if (data.detail) return data.detail;
+
+        const firstKey = Object.keys(data)[0];
+        if (!firstKey) return '';
+
+        const value = data[firstKey];
+        if (Array.isArray(value) && value.length) {
+            return `${firstKey}: ${value[0]}`;
+        }
+
+        if (typeof value === 'string') {
+            return `${firstKey}: ${value}`;
+        }
+
+        return 'Request failed. Please check your input and try again.';
     }
 
     /**

@@ -4,11 +4,10 @@ Custom DRF exception handler for commercial-grade error responses.
 This handler converts all DRF exceptions to a standardized JSON format
 and ensures consistent error reporting across the entire API.
 """
-from typing import Tuple
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import exception_handler as drf_exception_handler
-from django.utils import timezone
+from rest_framework.exceptions import ValidationError as DRFValidationError
 import logging
 
 from ECommerceSeller.exceptions import (
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 audit_logger = AuditLogger()
 
 
-def custom_exception_handler(exc, context) -> Tuple[Response, int]:
+def custom_exception_handler(exc, context) -> Response:
     """
     Custom exception handler that returns standardized JSON responses.
     
@@ -53,10 +52,10 @@ def custom_exception_handler(exc, context) -> Tuple[Response, int]:
     
     # If DRF returns None, create a 500 response
     if response is None:
-        return _handle_unexpected_error(exc, response_wrapper), status.HTTP_500_INTERNAL_SERVER_ERROR
+        return _handle_unexpected_error(exc, response_wrapper)
     
     # Transform response to standard format
-    return _transform_response(exc, response, response_wrapper, request), response.status_code
+    return _transform_response(exc, response, response_wrapper, request)
 
 
 def _log_exception(exc: Exception, request, view):
@@ -71,7 +70,8 @@ def _log_exception(exc: Exception, request, view):
             'remote_addr': _get_client_ip(request) if request else 'unknown',
         }
         
-        audit_logger.log_error(exc, context=context, user=user, severity='ERROR')
+        severity = 'WARNING' if isinstance(exc, DRFValidationError) else 'ERROR'
+        audit_logger.log_error(exc, context=context, user=user, severity=severity)
         
     except Exception as log_exc:
         logger.error(f"Failed to log exception: {log_exc}")

@@ -12,15 +12,19 @@ from django.views.static import serve
 from django.urls import re_path
 
 def home_view(request):
-    """Home page view with system statistics"""
+    """Home page view with system statistics and top sellers"""
     try:
         from apps.performance.models import Seller, Order, CustomerFeedback
+        
+        # Get top performers
+        top_sellers = Seller.objects.filter(status='active').order_by('-performance_score')[:6]
         
         context = {
             'total_sellers': Seller.objects.filter(status='active').count(),
             'total_orders': Order.objects.count(),
             'average_score': round(Seller.objects.aggregate(Avg('performance_score'))['performance_score__avg'] or 0, 1),
             'total_feedback': CustomerFeedback.objects.count(),
+            'top_sellers': top_sellers,
         }
     except Exception:
         # If database not ready, provide default values
@@ -29,6 +33,7 @@ def home_view(request):
             'total_orders': 0,
             'average_score': 0,
             'total_feedback': 0,
+            'top_sellers': [],
         }
     
     return render(request, 'home.html', context)
