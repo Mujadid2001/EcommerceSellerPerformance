@@ -292,6 +292,173 @@ python manage.py test apps.authentication
 python manage.py test apps.performance
 ```
 
+## Quick Run Instructions (Development)
+
+Use these steps when you just want to run the project quickly on your local machine.
+
+From the project root (`EcommerceSellerPerformance/`):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+cd ECommerceSeller
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Open:
+- http://127.0.0.1:8000/
+- http://127.0.0.1:8000/admin/
+- http://127.0.0.1:8000/api/docs/
+
+## Setup On a New Device (Development)
+
+Use this checklist when setting up the project on a new laptop/desktop for development.
+
+## 1) Install Required Tools
+
+- Git
+- Python 3.11+
+- VS Code (recommended)
+
+Verify installation:
+
+```powershell
+git --version
+python --version
+pip --version
+```
+
+## 2) Clone Repository
+
+```powershell
+git clone <your-repo-url>
+cd EcommerceSellerPerformance
+```
+
+## 3) Create Virtual Environment
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+## 4) Install Python Dependencies
+
+```powershell
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## 5) Configure Environment Variables
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Recommended local values:
+- `DEBUG=True`
+- `ALLOWED_HOSTS=localhost,127.0.0.1`
+- `CELERY_TASK_ALWAYS_EAGER=True`
+- `EMAIL_VERIFICATION_REQUIRED=False` (optional, for easier local testing)
+
+## 6) Initialize Database
+
+```powershell
+cd ECommerceSeller
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+## 7) Run Server
+
+```powershell
+python manage.py runserver
+```
+
+## 8) Sanity Check (Optional but Recommended)
+
+```powershell
+python manage.py test
+```
+
+## 9) Daily Development Workflow
+
+From project root:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+cd ECommerceSeller
+python manage.py runserver
+```
+
+## Viva Questions and Answers
+
+These viva questions are tailored to this project and can be used for interviews, demos, or academic evaluation.
+
+1. What problem does this system solve?
+   - It helps evaluate and monitor e-commerce seller performance with weighted scoring, automatic status assignment, AI insights, and audit logging.
+
+2. Why did you choose Django for this project?
+   - Django provides built-in admin, authentication, ORM, and strong security defaults, which speed up development of a business-critical platform.
+
+3. What are the main Django apps in this project?
+   - `authentication`, `performance`, `ai_insights`, `audit_trail`, and `core`.
+
+4. How is seller performance score calculated?
+   - Using weighted components: sales volume (30%), delivery speed (25%), customer rating (30%), and return behavior (15%).
+
+5. What is the score range and why?
+   - The final score is normalized between 0 and 100 for easy interpretation and threshold-based decision-making.
+
+6. How are seller statuses assigned?
+   - Active for score >= 70, Under Review for 40-69.99, and Suspended for score < 40.
+
+7. What is the role of the AI insights module?
+   - It performs trend analysis, anomaly detection, risk identification, and recommendation generation to help sellers improve proactively.
+
+8. How does the project support proactive management instead of reactive monitoring?
+   - Predictive alerts identify potential performance decline early, enabling corrective action before severe status changes.
+
+9. How are background tasks handled?
+   - With Celery tasks. In local development, eager mode can run tasks in-process without requiring Redis.
+
+10. Why is `CELERY_TASK_ALWAYS_EAGER=True` useful in local setup?
+   - It simplifies setup and debugging because asynchronous jobs execute immediately.
+
+11. What is stored in the audit trail?
+   - Security and business events, including request-level activity for compliance and traceability.
+
+12. How does this project handle API documentation?
+   - It uses drf-spectacular and exposes schema/docs endpoints (for example `/api/schema/` and `/api/docs/`).
+
+13. What kind of authentication model is used?
+   - A custom email-based user model with role-based access.
+
+14. How is role-based access control implemented?
+   - Through custom permissions and role checks in authentication and performance modules.
+
+15. How would you scale this project for production?
+   - Replace SQLite with PostgreSQL, set `DEBUG=False`, use strict hosts, run Celery with Redis/RabbitMQ, and add monitoring and backup.
+
+16. What are the risks if audit logging is disabled?
+   - Reduced visibility into security events, weaker compliance posture, and harder incident investigation.
+
+17. How can a seller improve their score practically?
+   - Improve delivery speed, reduce returns via better quality control, and increase customer ratings through service improvements.
+
+18. How does this project support both admin and seller users?
+   - Admins monitor all sellers and operations; seller users can track their own dashboards, insights, and recommendations.
+
+19. Why keep the architecture modular within one monolith?
+   - It balances maintainability and deployment simplicity while separating business concerns by app boundaries.
+
+20. What would be your next enhancement?
+   - Add richer model explainability for AI recommendations and stronger automated test coverage for edge-case score calculations.
+
 ## Typical Request Flow
 
 1. User authenticates through auth endpoints.
